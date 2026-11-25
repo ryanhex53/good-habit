@@ -19,6 +19,7 @@ import (
 	"good-habit/internal/httpapi"
 	"good-habit/internal/store"
 	"good-habit/internal/sweep"
+	"good-habit/internal/webui"
 	"good-habit/internal/writer"
 	"good-habit/migrations"
 )
@@ -68,6 +69,7 @@ func New(cfg config.Config) (*App, error) {
 		Auth:    svc,
 		Enqueue: w.Enqueue,
 		Flush:   w.Flush,
+		Static:  webui.Dist,
 	})
 
 	a := &App{

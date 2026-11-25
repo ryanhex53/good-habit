@@ -4,6 +4,7 @@
 package httpapi
 
 import (
+	"io/fs"
 	"net/http"
 	"time"
 
@@ -24,6 +25,8 @@ type Deps struct {
 	Enqueue func(ledger.Op)
 	// Flush 是组提交屏障（写后读路径用；nil = 无 writer，跳过屏障）。
 	Flush func() error
+	// Static 是前端构建产物（nil = 不提供静态服务，纯 API 模式）。
+	Static fs.FS
 
 	// RateGeneral 是每 IP 每分钟全局请求上限；0 → 240。
 	RateGeneral int64
@@ -91,6 +94,10 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc("GET /api/overview", RequireRole("parent", s.handleOverview))
 	mux.HandleFunc("GET /api/ledger", s.handleLedger) // 双角色：child 限自己 / parent 全家
 	mux.HandleFunc("GET /api/draws", RequireRole("parent", s.handleDrawsList))
+
+	if s.deps.Static != nil {
+		RegisterStatic(mux, s.deps.Static)
+	}
 	return mux
 }
 
