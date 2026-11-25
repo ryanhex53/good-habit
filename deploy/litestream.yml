@@ -1,0 +1,14 @@
+# Litestream 持续备份：每 10 秒增量同步 WAL → Cloudflare R2。
+# 密钥经环境变量注入（litestream.service 里的 EnvironmentFile），
+# 桶名与账号占位替换成你的实际值。
+dbs:
+  - path: /var/lib/good-habit/app.db
+    replicas:
+      - type: s3
+        # Cloudflare R2 S3 兼容端点：<ACCOUNT_ID> 换成你的账户 ID
+        endpoint: https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+        bucket: good-habit
+        # retention: 副本保留时长（默认 720h = 30 天）
+        retention: 720h
+        sync-interval: 10s
+        skip-verify: false

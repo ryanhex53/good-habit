@@ -1,0 +1,25 @@
+[Unit]
+Description=Litestream（good-habit 数据库 → Cloudflare R2）
+After=good-habit.service
+Wants=good-habit.service
+
+[Service]
+Type=simple
+User=good-habit
+Group=good-habit
+ExecStart=/usr/local/bin/litestream replicate -config /etc/good-habit/litestream.yml
+Restart=on-failure
+RestartSec=5
+
+# R2 密钥放这里（chmod 600，勿入库）：
+#   LITESTREAM_ACCESS_KEY_ID=...
+#   LITESTREAM_SECRET_ACCESS_KEY=...
+EnvironmentFile=/etc/good-habit/litestream.env
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/good-habit
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

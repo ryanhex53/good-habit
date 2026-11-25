@@ -1,0 +1,29 @@
+[Unit]
+Description=good-habit 家庭积分与转盘抽奖
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=good-habit
+Group=good-habit
+ExecStart=/usr/local/bin/good-habit -addr 127.0.0.1:8080 -db /var/lib/good-habit/app.db
+Restart=on-failure
+RestartSec=3
+
+# 优雅停机：SIGTERM 后给 Drain 最多 30 秒（组提交队列排空）
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# 加固
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/good-habit
+PrivateTmp=yes
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target
