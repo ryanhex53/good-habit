@@ -72,6 +72,8 @@ func (s *server) routes() *http.ServeMux {
 
 	mux.HandleFunc("GET /api/wheel-config", RequireRole("parent", s.handleWheelConfigGet))
 	mux.HandleFunc("PUT /api/wheel-config", RequireRole("parent", s.handleWheelConfigPut))
+
+	mux.HandleFunc("POST /api/bootstrap", RequireRole("parent", s.handleBootstrap))
 	// 后续任务在此追加 /api/* 路由
 	return mux
 }
