@@ -59,6 +59,19 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc("GET /api/children", RequireRole("parent", s.handleChildrenList))
 	mux.HandleFunc("POST /api/children", RequireRole("parent", s.handleChildCreate))
 	mux.HandleFunc("PATCH /api/children/{id}", RequireRole("parent", s.handleChildUpdate))
+
+	mux.HandleFunc("GET /api/reward-items", RequireRole("parent", s.handleItemsList))
+	mux.HandleFunc("POST /api/reward-items", RequireRole("parent", s.handleItemCreate))
+	mux.HandleFunc("PATCH /api/reward-items/{id}", RequireRole("parent", s.handleItemUpdate))
+	mux.HandleFunc("DELETE /api/reward-items/{id}", RequireRole("parent", s.handleItemDelete))
+
+	mux.HandleFunc("GET /api/prizes", RequireRole("parent", s.handlePrizesList))
+	mux.HandleFunc("POST /api/prizes", RequireRole("parent", s.handlePrizeCreate))
+	mux.HandleFunc("PATCH /api/prizes/{id}", RequireRole("parent", s.handlePrizeUpdate))
+	mux.HandleFunc("DELETE /api/prizes/{id}", RequireRole("parent", s.handlePrizeDelete))
+
+	mux.HandleFunc("GET /api/wheel-config", RequireRole("parent", s.handleWheelConfigGet))
+	mux.HandleFunc("PUT /api/wheel-config", RequireRole("parent", s.handleWheelConfigPut))
 	// 后续任务在此追加 /api/* 路由
 	return mux
 }
