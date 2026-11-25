@@ -3,6 +3,7 @@ package httpapi
 import (
 	"database/sql"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,7 +28,7 @@ func (s *server) handleChildrenList(w http.ResponseWriter, r *http.Request) {
 		"SELECT id, username, display_name, active FROM users WHERE family_id=? AND role='child' ORDER BY id",
 		sess.FamilyID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查孩子失败")
+		writeInternal(w, r, err, "查孩子失败")
 		return
 	}
 	defer rows.Close()
@@ -36,7 +37,7 @@ func (s *server) handleChildrenList(w http.ResponseWriter, r *http.Request) {
 		var v childView
 		var active int64
 		if err := rows.Scan(&v.ID, &v.Username, &v.DisplayName, &active); err != nil {
-			writeErr(w, http.StatusInternalServerError, "internal", "读孩子失败")
+			writeInternal(w, r, err, "读孩子失败")
 			return
 		}
 		v.Active = active == 1
@@ -73,7 +74,7 @@ func (s *server) handleChildCreate(w http.ResponseWriter, r *http.Request) {
 
 	hash, err := auth.HashPassword(body.Password)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "密码散列失败")
+		writeInternal(w, r, err, "密码散列失败")
 		return
 	}
 	now := time.Now().UnixMilli()
@@ -140,7 +141,7 @@ func (s *server) handleChildUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查孩子失败")
+		writeInternal(w, r, err, "查孩子失败")
 		return
 	}
 
@@ -148,7 +149,7 @@ func (s *server) handleChildUpdate(w http.ResponseWriter, r *http.Request) {
 	if body.Password != "" {
 		h, err := auth.HashPassword(body.Password)
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "internal", "密码散列失败")
+			writeInternal(w, r, err, "密码散列失败")
 			return
 		}
 		newHash = &h
@@ -163,6 +164,10 @@ func (s *server) handleChildUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		if newHash != nil {
 			if _, err := tx.Exec("UPDATE users SET password_hash=? WHERE id=?", *newHash, childID); err != nil {
+				return err
+			}
+			// 重置密码即踢下线（与停用同一安全语义）
+			if _, err := tx.Exec("DELETE FROM sessions WHERE user_id=?", childID); err != nil {
 				return err
 			}
 		}
@@ -184,11 +189,19 @@ func (s *server) handleChildUpdate(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "更新孩子失败")
+		writeInternal(w, r, err, "更新孩子失败")
 		return
 	}
 	if deactivate {
 		s.deps.Store.DeleteSessionsForUser(childID)
+	}
+	if newHash != nil {
+		s.deps.Store.DeleteSessionsForUser(childID)
+	}
+	if body.Active != nil && *body.Active {
+		// 恢复启用：停用期间无任何写入（孩子无会话、earn 校验 active=1），
+		// DB 即权威——从 DB 水化热状态，防止重启后懒创建的零值账户覆盖真实余额。
+		s.hydrateChild(childID)
 	}
 
 	// 回读构造响应（写后读，同步事务已提交）
@@ -198,10 +211,42 @@ func (s *server) handleChildUpdate(w http.ResponseWriter, r *http.Request) {
 		"SELECT id, username, display_name, active FROM users WHERE id=?", childID,
 	).Scan(&v.ID, &v.Username, &v.DisplayName, &act)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "回读孩子失败")
+		writeInternal(w, r, err, "回读孩子失败")
 		return
 	}
 	v.Active = act == 1
 	v.Balance = s.deps.Store.Child(childID).Bal()
 	writeJSON(w, http.StatusOK, v)
+}
+
+// hydrateChild 从 DB 重建孩子的内存热状态（余额/待选局/待发放数）。
+// 使用场景：恢复启用（停用期间无任何写入，DB 为唯一权威）。
+func (s *server) hydrateChild(childID int64) {
+	var bal int64
+	if err := s.deps.DBs.Read.QueryRow(
+		"SELECT balance FROM users WHERE id=?", childID).Scan(&bal); err != nil {
+		slog.Error("水化孩子余额失败", "err", err, "child_id", childID)
+	}
+	var unful int64
+	if err := s.deps.DBs.Read.QueryRow(
+		"SELECT COUNT(*) FROM draws WHERE child_id=? AND state='completed' AND fulfilled_at IS NULL",
+		childID).Scan(&unful); err != nil {
+		slog.Error("水化待发放数失败", "err", err, "child_id", childID)
+	}
+	var pendUUID string
+	var pendDeadline sql.NullInt64
+	_ = s.deps.DBs.Read.QueryRow(
+		"SELECT uuid, created_at + 172800000 FROM draws WHERE child_id=? AND state='pending_choice' LIMIT 1",
+		childID).Scan(&pendUUID, &pendDeadline)
+
+	c := s.deps.Store.Child(childID)
+	c.Lock()
+	defer c.Unlock()
+	c.Balance = bal
+	c.Unfulfilled = unful
+	c.PendingUUID = pendUUID
+	c.PendingDeadline = 0
+	if pendDeadline.Valid {
+		c.PendingDeadline = pendDeadline.Int64
+	}
 }

@@ -129,7 +129,7 @@ func (s *server) handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "导入失败")
+		writeInternal(w, r, err, "导入失败")
 		return
 	}
 	s.reloadFamily(w, r, sess.FamilyID)

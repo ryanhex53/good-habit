@@ -3,3 +3,6 @@ web/node_modules/
 internal/webui/dist/*
 !internal/webui/dist/.keep
 /dist/
+*.db
+*.db-wal
+*.db-shm

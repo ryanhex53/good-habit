@@ -6,6 +6,11 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"good-habit/internal/auth"
+	"good-habit/internal/config"
+	"good-habit/internal/ledger"
+	"good-habit/internal/store"
 )
 
 // apiPath 拼接 /api/... 路径：apiPath("children", 12) → "/api/children/12"。
@@ -141,6 +146,58 @@ func TestChildLifecycle(t *testing.T) {
 	}
 }
 
+func TestReactivateRestoresBalance(t *testing.T) {
+	deps, w := newDepsWithWriter(t)
+	h := New(deps)
+	p := regParent(t, deps.Auth, "reactiv1")
+	pc := parentCookie(p.Token)
+	it := mkItem(t, h, pc, "恢复项", 100)
+	child := mkChild(t, h, pc, "reactivkid", "娃")
+	if rr := doJSON(h, "POST", "/api/earnings", map[string]any{
+		"childId": child.ID, "rewardItemId": it.ID,
+	}, pc); rr.Code != 200 {
+		t.Fatalf("earn = %d", rr.Code)
+	}
+	if err := w.Stop(); err != nil { // 余额 100 落盘
+		t.Fatalf("Stop: %v", err)
+	}
+
+	// 模拟重启：全新 store（未 LoadAll，懒创建账户为 0）
+	st2 := store.New()
+	deps2 := Deps{
+		Cfg:   config.Config{},
+		DBs:   deps.DBs,
+		Store: st2,
+		Auth:  &auth.Service{DBs: deps.DBs, Store: st2, Enqueue: func(ledger.Op) {}},
+	}
+	h2 := New(deps2)
+	putSession(t, st2, p.Token, "parent")
+
+	// 停用（原句柄）
+	if rr := doJSON(h, "PATCH", apiPath("children", child.ID), map[string]any{"active": false}, pc); rr.Code != 200 {
+		t.Fatalf("停用 = %d", rr.Code)
+	}
+	// 新句柄（重启后的进程）恢复启用
+	rr := doJSON(h2, "PATCH", apiPath("children", child.ID), map[string]any{"active": true}, parentCookie(p.Token))
+	if rr.Code != 200 {
+		t.Fatalf("恢复 = %d %s", rr.Code, rr.Body.String())
+	}
+	if bal := st2.Child(child.ID).Bal(); bal != 100 {
+		t.Fatalf("恢复启用后内存余额 = %d, want 100（应从 DB 水化）", bal)
+	}
+	// 列表/总览读同一内存值
+	rr = doJSON(h2, "GET", "/api/children", nil, parentCookie(p.Token))
+	var list struct {
+		Children []struct {
+			Balance int64 `json:"balance"`
+		} `json:"children"`
+	}
+	json.Unmarshal(rr.Body.Bytes(), &list)
+	if len(list.Children) != 1 || list.Children[0].Balance != 100 {
+		t.Errorf("恢复后列表余额 = %+v, want 100", list.Children)
+	}
+}
+
 func TestChildFamilyIsolation(t *testing.T) {
 	deps, svc := newDeps(t)
 	h := New(deps)
@@ -176,5 +233,37 @@ func TestChildFamilyIsolation(t *testing.T) {
 	rr = doJSON(h, "GET", "/api/children", nil, kidCookie)
 	if rr.Code != 403 {
 		t.Errorf("孩子访问家长路由 = %d, want 403", rr.Code)
+	}
+}
+
+func TestResetChildPasswordKicksSessions(t *testing.T) {
+	deps, w := newDepsWithWriter(t)
+	h := New(deps)
+	p := regParent(t, deps.Auth, "resetpw1")
+	pc := parentCookie(p.Token)
+	child := mkChild(t, h, pc, "resetpwkid", "娃")
+	_ = w
+
+	kc := loginAs(t, h, "resetpwkid", "password8")
+	if rr := doJSON(h, "GET", "/api/me", nil, kc); rr.Code != 200 {
+		t.Fatalf("孩子 me = %d", rr.Code)
+	}
+
+	// 家长重置孩子密码
+	if rr := doJSON(h, "PATCH", apiPath("children", child.ID), map[string]any{
+		"password": "brandnew9",
+	}, pc); rr.Code != 200 {
+		t.Fatalf("重置密码 = %d %s", rr.Code, rr.Body.String())
+	}
+
+	// 旧会话应立即失效（内存 + DB）
+	if rr := doJSON(h, "GET", "/api/me", nil, kc); rr.Code != 401 {
+		t.Errorf("重置后旧 cookie me = %d, want 401", rr.Code)
+	}
+	// 新密码可登录
+	if rr := doJSON(h, "POST", "/api/auth/login", map[string]any{
+		"username": "resetpwkid", "password": "brandnew9",
+	}); rr.Code != 200 {
+		t.Errorf("新密码登录 = %d, want 200", rr.Code)
 	}
 }

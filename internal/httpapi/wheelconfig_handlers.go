@@ -13,7 +13,7 @@ func (s *server) handleWheelConfigGet(w http.ResponseWriter, r *http.Request) {
 		"SELECT single_draw_cost, double_draw_cost FROM families WHERE id=?", sess.FamilyID,
 	).Scan(&single, &dbl)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查定价失败")
+		writeInternal(w, r, err, "查定价失败")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"singleCost": single, "doubleCost": dbl})
@@ -41,7 +41,7 @@ func (s *server) handleWheelConfigPut(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "更新定价失败")
+		writeInternal(w, r, err, "更新定价失败")
 		return
 	}
 	s.reloadFamily(w, r, sess.FamilyID)

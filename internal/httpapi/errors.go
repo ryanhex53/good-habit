@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 )
 
@@ -27,6 +28,13 @@ func writeErr(w http.ResponseWriter, status int, code, msg string) {
 	writeJSON(w, status, map[string]any{
 		"error": map[string]string{"code": code, "message": msg},
 	})
+}
+
+// writeInternal 记录底层错误（含请求 ID/路径）后返回 500 信封——
+// 生产环境从 journalctl 可诊断，而不是只见 "internal"。
+func writeInternal(w http.ResponseWriter, r *http.Request, err error, msg string) {
+	slog.Error("internal", "err", err, "req", r.Header.Get("X-Request-Id"), "path", r.URL.Path)
+	writeErr(w, http.StatusInternalServerError, "internal", msg)
 }
 
 // decodeJSON 读取请求体并限制大小；失败返回 false（响应已写）。

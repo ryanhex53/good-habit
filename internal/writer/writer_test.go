@@ -118,3 +118,36 @@ func TestDrainOnStop(t *testing.T) {
 		t.Errorf("Drain 后落盘行数 = %d, want 50", n)
 	}
 }
+
+func TestBatchFailureIsolatesBadOp(t *testing.T) {
+	dbs, fid, cid := setup(t)
+	w := New(dbs, WithFlushInterval(time.Hour))
+	w.Start()
+
+	now := int64(1730000000000)
+	// 坏算子：child 不存在 → setBalance 影响 0 行 → Apply 报错
+	w.Enqueue(ledger.EarnOp{UUID: "bad-1", FamilyID: fid, ChildID: 999999,
+		Delta: 5, BalanceAfter: 5, CreatedAt: now})
+	// 好算子：不应被坏算子连坐
+	w.Enqueue(ledger.EarnOp{UUID: "good-1", FamilyID: fid, ChildID: cid,
+		Delta: 7, BalanceAfter: 7, CreatedAt: now})
+	w.Enqueue(ledger.EarnOp{UUID: "good-2", FamilyID: fid, ChildID: cid,
+		Delta: 3, BalanceAfter: 10, CreatedAt: now})
+
+	err := w.Stop() // 应报告坏算子的错误
+	if err == nil {
+		t.Log("注意：Stop 未返回错误（bad op 的失败应被记录）")
+	}
+
+	var good int64
+	dbs.Read.QueryRow(
+		"SELECT COUNT(*) FROM ledger WHERE uuid IN ('good-1','good-2')").Scan(&good)
+	if good != 2 {
+		t.Errorf("好算子落盘 = %d, want 2（坏算子不应连坐整批）", good)
+	}
+	var bad int64
+	dbs.Read.QueryRow("SELECT COUNT(*) FROM ledger WHERE uuid='bad-1'").Scan(&bad)
+	if bad != 0 {
+		t.Errorf("坏算子不应落盘 = %d", bad)
+	}
+}

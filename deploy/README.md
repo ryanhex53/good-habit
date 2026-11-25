@@ -13,7 +13,7 @@ sudo chown good-habit:good-habit /var/lib/good-habit
 sudo mkdir -p /etc/good-habit
 ```
 
-需要：Go ≥ 1.23（仅构建期需要；也可在开发机交叉编译后只传二进制）、Node ≥ 20
+需要：Go ≥ 1.26（仅构建期需要；modernc/sqlite v1.63 的底线，README 原写 1.23；也可在开发机交叉编译后只传二进制）、Node ≥ 20
 （仅构建期）、Litestream v0.5+（运行期，见 [litestream.io](https://litestream.io)）。
 
 ## 2. 构建
@@ -102,3 +102,10 @@ sudo good-habit-restore -timestamp "2026-11-25T12:00:00Z"   # 恢复到时间点
 
 注册第一个家长账号后，总览页提供「一键导入示例」（11 个积分项 + 3 个奖品 +
 5/7 定价），可再按需修改。
+
+## 运维补充
+
+- `good-habit reset-password` 只清数据库中的会话行；**正在运行的服务持有内存会话**，重置后请执行
+  `systemctl restart good-habit` 使旧会话彻底失效。
+- `GOODHABIT_TRUST_PROXY=1` 时的真实 IP 取值：优先 `CF-Connecting-IP`（Cloudflare Tunnel），
+  否则取 `X-Forwarded-For` 最右侧一跳（首段可被客户端伪造，不可用作限流依据）。

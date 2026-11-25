@@ -23,6 +23,12 @@ async function doLogout() {
 
 <template>
   <div class="parent-shell">
+    <!-- 手机端顶栏（含登出，桌面端隐藏） -->
+    <div class="mobile-bar">
+      <span class="m-brand">好习惯</span>
+      <span class="m-who">{{ me?.displayName }}</span>
+      <button class="ghost mini" @click="doLogout">退出</button>
+    </div>
     <aside class="side">
       <div class="brand">好习惯 · 家长端</div>
       <nav>
@@ -96,10 +102,29 @@ async function doLogout() {
   max-width: 980px;
 }
 
-/* ≤768px：侧栏折叠为顶部横向 Tab */
+/* ≤768px：侧栏折叠为顶部横向 Tab，另设含登出的顶栏 */
+.mobile-bar {
+  display: none;
+}
 @media (max-width: 768px) {
   .parent-shell {
     flex-direction: column;
+  }
+  .mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--c-card);
+    border-bottom: 1px solid #eee;
+  }
+  .m-brand {
+    font-weight: 800;
+  }
+  .m-who {
+    flex: 1;
+    font-size: 14px;
+    color: var(--c-sub);
   }
   .side {
     width: 100%;

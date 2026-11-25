@@ -283,4 +283,6 @@ func TestConcurrentEarn(t *testing.T) {
 	if userBal != 50 {
 		t.Errorf("users.balance = %d, want 50", userBal)
 	}
+	// 并发后的账单余额链必须自洽（不变量 §9.1）
+	assertLedgerChain(t, deps.DBs, child.ID)
 }

@@ -43,6 +43,28 @@ async function toggle(pz: PrizeAdminView) {
   }
 }
 
+async function rename(pz: PrizeAdminView) {
+  const name = prompt('新名称：', pz.name)
+  if (!name || name.trim() === '') return
+  try {
+    await api('PATCH', `/api/prizes/${pz.id}`, { name: name.trim() })
+    load()
+  } catch (e) {
+    error.value = errMsg(e)
+  }
+}
+
+async function changeEmoji(pz: PrizeAdminView) {
+  const emoji = prompt('新 emoji（留空保持 🎁）：', pz.emoji)
+  if (emoji === null) return
+  try {
+    await api('PATCH', `/api/prizes/${pz.id}`, { emoji: emoji.trim() || '🎁' })
+    load()
+  } catch (e) {
+    error.value = errMsg(e)
+  }
+}
+
 async function saveCost() {
   error.value = ''
   costSaved.value = ''
@@ -94,6 +116,8 @@ onMounted(load)
         <span class="emoji">{{ pz.emoji }}</span>
         <span class="name">{{ pz.name }}</span>
         <span class="ops">
+          <button class="ghost" @click="rename(pz)">改名</button>
+          <button class="ghost" @click="changeEmoji(pz)">改 emoji</button>
           <button class="ghost" @click="toggle(pz)">{{ pz.active ? '停用' : '启用' }}</button>
         </span>
       </div>

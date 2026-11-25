@@ -10,7 +10,7 @@ if compgen -G "$HOME"/sdk/go1.*/bin/go >/dev/null 2>&1; then
   GO_BIN="$(ls -1d "$HOME"/sdk/go1.*/bin/go | sort -V | tail -1)"
 fi
 if [ -z "$GO_BIN" ]; then
-  echo "错误：找不到 go，需要 Go ≥1.23" >&2
+  echo "错误：找不到 go，需要 Go ≥1.26" >&2
   exit 1
 fi
 echo "使用 $("$GO_BIN" version)"

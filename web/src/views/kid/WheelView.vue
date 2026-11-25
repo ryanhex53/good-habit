@@ -110,10 +110,10 @@ function closeResult() {
 
 onMounted(async () => {
   await load()
-  // 从首页横幅跳转回来：直接进入待选
+  // 有待选局（无论从横幅跳来还是直接点 Tab 进来）都直接进入选择界面
   const resume = route.query.resume
   const w = await api<WheelInfo>('GET', '/api/wheel')
-  if (resume && w.pending && w.pending.uuid === resume) {
+  if (w.pending && (!resume || w.pending.uuid === resume)) {
     pendingUUID.value = w.pending.uuid
     choices.value = w.pending.choices
     phase.value = 'choose'

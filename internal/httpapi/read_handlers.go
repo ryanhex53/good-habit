@@ -75,7 +75,7 @@ func (s *server) handleWheel(w http.ResponseWriter, r *http.Request) {
 				},
 			}
 		} else if !errors.Is(err, sql.ErrNoRows) {
-			writeErr(w, http.StatusInternalServerError, "internal", "查待选局失败")
+			writeInternal(w, r, err, "查待选局失败")
 			return
 		}
 	}
@@ -100,7 +100,7 @@ func (s *server) handleOverview(w http.ResponseWriter, r *http.Request) {
 		"SELECT id, display_name FROM users WHERE family_id=? AND role='child' AND active=1 ORDER BY id",
 		sess.FamilyID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查孩子失败")
+		writeInternal(w, r, err, "查孩子失败")
 		return
 	}
 	type ovChild struct {
@@ -115,7 +115,7 @@ func (s *server) handleOverview(w http.ResponseWriter, r *http.Request) {
 		var c ovChild
 		if err := rows.Scan(&c.ID, &c.DisplayName); err != nil {
 			rows.Close()
-			writeErr(w, http.StatusInternalServerError, "internal", "读孩子失败")
+			writeInternal(w, r, err, "读孩子失败")
 			return
 		}
 		bal, pending, unful := s.deps.Store.Child(c.ID).Stats()
@@ -196,7 +196,7 @@ func (s *server) handleLedger(w http.ResponseWriter, r *http.Request) {
 	ORDER BY l.id DESC LIMIT ?`
 	rows, err := s.deps.DBs.Read.Query(q, sess.FamilyID, childID, childID, before, before, limit+1)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查账单失败")
+		writeInternal(w, r, err, "查账单失败")
 		return
 	}
 	defer rows.Close()
@@ -205,7 +205,7 @@ func (s *server) handleLedger(w http.ResponseWriter, r *http.Request) {
 		var v ledgerRow
 		if err := rows.Scan(&v.ID, &v.CreatedAt, &v.Kind, &v.Delta, &v.BalanceAfter,
 			&v.Note, &v.ItemTitle, &v.Mode, &v.PrizeName); err != nil {
-			writeErr(w, http.StatusInternalServerError, "internal", "读账单失败")
+			writeInternal(w, r, err, "读账单失败")
 			return
 		}
 		list = append(list, v)
@@ -247,7 +247,7 @@ func (s *server) handleDrawsList(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := s.deps.DBs.Read.Query(q, args...)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查抽奖失败")
+		writeInternal(w, r, err, "查抽奖失败")
 		return
 	}
 	defer rows.Close()
@@ -266,7 +266,7 @@ func (s *server) handleDrawsList(w http.ResponseWriter, r *http.Request) {
 		var v drawListItem
 		if err := rows.Scan(&v.UUID, &v.ChildName, &v.Mode, &v.Cost, &v.State,
 			&v.FulfilledAt, &v.CreatedAt, &v.PrizeName); err != nil {
-			writeErr(w, http.StatusInternalServerError, "internal", "读抽奖失败")
+			writeInternal(w, r, err, "读抽奖失败")
 			return
 		}
 		list = append(list, v)

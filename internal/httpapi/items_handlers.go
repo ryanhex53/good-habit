@@ -25,7 +25,7 @@ func (s *server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 		"SELECT id, title, points, active, sort FROM reward_items WHERE family_id=? ORDER BY sort, id",
 		sess.FamilyID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查积分项失败")
+		writeInternal(w, r, err, "查积分项失败")
 		return
 	}
 	defer rows.Close()
@@ -34,7 +34,7 @@ func (s *server) handleItemsList(w http.ResponseWriter, r *http.Request) {
 		var v itemView
 		var active int64
 		if err := rows.Scan(&v.ID, &v.Title, &v.Points, &active, &v.Sort); err != nil {
-			writeErr(w, http.StatusInternalServerError, "internal", "读积分项失败")
+			writeInternal(w, r, err, "读积分项失败")
 			return
 		}
 		v.Active = active == 1
@@ -76,7 +76,7 @@ func (s *server) handleItemCreate(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "新建积分项失败")
+		writeInternal(w, r, err, "新建积分项失败")
 		return
 	}
 	s.reloadFamily(w, r, sess.FamilyID)
@@ -139,7 +139,7 @@ func (s *server) handleItemUpdate(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "更新积分项失败")
+		writeInternal(w, r, err, "更新积分项失败")
 		return
 	}
 	s.reloadFamily(w, r, sess.FamilyID)
@@ -162,7 +162,7 @@ func (s *server) handleItemDelete(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "删除积分项失败")
+		writeInternal(w, r, err, "删除积分项失败")
 		return
 	}
 	s.reloadFamily(w, r, sess.FamilyID)
@@ -176,7 +176,7 @@ func (s *server) writeItemView(w http.ResponseWriter, r *http.Request, id int64)
 		"SELECT id, title, points, active, sort FROM reward_items WHERE id=?", id,
 	).Scan(&v.ID, &v.Title, &v.Points, &active, &v.Sort)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "回读积分项失败")
+		writeInternal(w, r, err, "回读积分项失败")
 		return
 	}
 	v.Active = active == 1
@@ -194,7 +194,7 @@ func (s *server) owned(w http.ResponseWriter, r *http.Request, table string, id,
 		return false
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "校验资源失败")
+		writeInternal(w, r, err, "校验资源失败")
 		return false
 	}
 	return true

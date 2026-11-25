@@ -192,7 +192,7 @@ func (s *server) handleChoose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查抽奖失败")
+		writeInternal(w, r, err, "查抽奖失败")
 		return
 	}
 	if state != "pending_choice" {
@@ -213,7 +213,7 @@ func (s *server) handleChoose(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "选择失败")
+		writeInternal(w, r, err, "选择失败")
 		return
 	}
 	if !updated {
@@ -239,7 +239,7 @@ func (s *server) handleChoose(w http.ResponseWriter, r *http.Request) {
 	if err := s.deps.DBs.Read.QueryRow(
 		"SELECT id, name, emoji FROM prizes WHERE id=?", chosenID,
 	).Scan(&pv.ID, &pv.Name, &pv.Emoji); err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查奖品失败")
+		writeInternal(w, r, err, "查奖品失败")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -266,7 +266,7 @@ func (s *server) handleFulfill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查抽奖失败")
+		writeInternal(w, r, err, "查抽奖失败")
 		return
 	}
 	if fulfilled.Valid {
@@ -285,7 +285,7 @@ func (s *server) handleFulfill(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "发放失败")
+		writeInternal(w, r, err, "发放失败")
 		return
 	}
 

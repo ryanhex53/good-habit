@@ -23,7 +23,7 @@ func (s *server) handlePrizesList(w http.ResponseWriter, r *http.Request) {
 		"SELECT id, name, emoji, active, sort FROM prizes WHERE family_id=? ORDER BY sort, id",
 		sess.FamilyID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "查奖品失败")
+		writeInternal(w, r, err, "查奖品失败")
 		return
 	}
 	defer rows.Close()
@@ -32,7 +32,7 @@ func (s *server) handlePrizesList(w http.ResponseWriter, r *http.Request) {
 		var v prizeView
 		var active int64
 		if err := rows.Scan(&v.ID, &v.Name, &v.Emoji, &active, &v.Sort); err != nil {
-			writeErr(w, http.StatusInternalServerError, "internal", "读奖品失败")
+			writeInternal(w, r, err, "读奖品失败")
 			return
 		}
 		v.Active = active == 1
@@ -78,7 +78,7 @@ func (s *server) handlePrizeCreate(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "新建奖品失败")
+		writeInternal(w, r, err, "新建奖品失败")
 		return
 	}
 	s.reloadFamily(w, r, sess.FamilyID)
@@ -141,7 +141,7 @@ func (s *server) handlePrizeUpdate(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "更新奖品失败")
+		writeInternal(w, r, err, "更新奖品失败")
 		return
 	}
 	s.reloadFamily(w, r, sess.FamilyID)
@@ -164,7 +164,7 @@ func (s *server) handlePrizeDelete(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "删除奖品失败")
+		writeInternal(w, r, err, "删除奖品失败")
 		return
 	}
 	s.reloadFamily(w, r, sess.FamilyID)
@@ -178,7 +178,7 @@ func (s *server) writePrizeView(w http.ResponseWriter, r *http.Request, id int64
 		"SELECT id, name, emoji, active, sort FROM prizes WHERE id=?", id,
 	).Scan(&v.ID, &v.Name, &v.Emoji, &active, &v.Sort)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal", "回读奖品失败")
+		writeInternal(w, r, err, "回读奖品失败")
 		return
 	}
 	v.Active = active == 1

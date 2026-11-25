@@ -55,7 +55,7 @@ func (s *server) handleEarning(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusUnprocessableEntity, "item_inactive", "该积分项已停用")
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "internal", "快照缺失积分项")
+		writeInternal(w, r, err, "快照缺失积分项")
 		return
 	}
 

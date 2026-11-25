@@ -7,6 +7,7 @@ package writer
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -163,9 +164,32 @@ func (w *Writer) loop() {
 	}
 }
 
-// flush 把一批事件合并成一个事务提交（WriteMu 与同步 CRUD 互斥）。
+// flush 把一批事件落盘：先整批一个事务；批次失败时退化为逐条隔离提交——
+// 坏算子只影响自己（记录错误），好算子不陪葬。屏障信号无论成败都放行等待者。
 func (w *Writer) flush(batch []ledger.Op) {
-	err := w.dbs.WithTx(func(tx *sql.Tx) error {
+	err := w.applyBatch(batch)
+	w.commits.Add(1)
+	if err != nil {
+		slog.Warn("组提交批次失败，逐条隔离重放", "err", err, "batch", len(batch))
+		for _, op := range batch {
+			if ferr := w.applyBatch([]ledger.Op{op}); ferr != nil {
+				w.errMu.Lock()
+				w.flushErr = ferr
+				w.errMu.Unlock()
+				slog.Error("落盘算子失败（已隔离；内存态可能领先 DB，重启以账单为准）",
+					"err", ferr, "op", fmt.Sprintf("%T", op))
+			}
+		}
+	}
+	for _, op := range batch {
+		if sig, ok := op.(*flushSignal); ok {
+			close(sig.done)
+		}
+	}
+}
+
+func (w *Writer) applyBatch(batch []ledger.Op) error {
+	return w.dbs.WithTx(func(tx *sql.Tx) error {
 		for _, op := range batch {
 			if err := op.Apply(tx); err != nil {
 				return err
@@ -173,17 +197,4 @@ func (w *Writer) flush(batch []ledger.Op) {
 		}
 		return nil
 	})
-	w.commits.Add(1)
-	// 屏障信号：无论成败都要放行等待者
-	for _, op := range batch {
-		if sig, ok := op.(*flushSignal); ok {
-			close(sig.done)
-		}
-	}
-	if err != nil {
-		w.errMu.Lock()
-		w.flushErr = err
-		w.errMu.Unlock()
-		slog.Error("组提交批次失败", "err", err, "batch", len(batch))
-	}
 }

@@ -52,6 +52,17 @@ async function editPoints(it: ItemView) {
   }
 }
 
+async function rename(it: ItemView) {
+  const title = prompt('新标题：', it.title)
+  if (!title || title.trim() === '') return
+  try {
+    await api('PATCH', `/api/reward-items/${it.id}`, { title: title.trim() })
+    load()
+  } catch (e) {
+    error.value = errMsg(e)
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -74,6 +85,7 @@ onMounted(load)
         <span class="title">{{ it.title }}</span>
         <span class="pts">+{{ it.points }} 分</span>
         <span class="ops">
+          <button class="ghost" @click="rename(it)">改名</button>
           <button class="ghost" @click="editPoints(it)">改分值</button>
           <button class="ghost" @click="toggle(it)">{{ it.active ? '停用' : '启用' }}</button>
         </span>

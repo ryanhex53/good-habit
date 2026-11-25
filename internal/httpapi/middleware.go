@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"good-habit/internal/ledger"
 	"good-habit/internal/store"
 )
 
@@ -84,6 +85,19 @@ func (s *server) chain(next http.Handler) http.Handler {
 			hash := sha256Hex(c.Value)
 			if sess, ok := s.deps.Store.GetSession(hash); ok && sess.ExpiresAt > time.Now().UnixMilli() {
 				r = r.WithContext(context.WithValue(r.Context(), sessionCtxKey{}, sess))
+				// 滑动续期（spec §10：30 天滑动）：剩余不足 29 天时顺延到 30 天；
+				// 续期后剩余回到 30 天，天然按天节流，不会每请求都写。
+				nowMs := time.Now().UnixMilli()
+				if sess.ExpiresAt < nowMs+29*24*3600*1000 {
+					sess.ExpiresAt = nowMs + 30*24*3600*1000
+					s.deps.Store.PutSession(sess)
+					if s.deps.Enqueue != nil {
+						s.deps.Enqueue(ledger.SessionUpsertOp{
+							TokenHash: sess.TokenHash, UserID: sess.UserID,
+							ExpiresAt: sess.ExpiresAt, CreatedAt: nowMs,
+						})
+					}
+				}
 			}
 		}
 
@@ -95,14 +109,18 @@ func (s *server) chain(next http.Handler) http.Handler {
 	})
 }
 
-// clientIP 提取客户端 IP；TrustProxy 时信任 X-Forwarded-For 首段。
+// clientIP 提取客户端 IP。
+// TrustProxy 时：优先 CF-Connecting-IP（Cloudflare Tunnel 的权威头）；
+// 否则取 X-Forwarded-For 最右侧一跳（由离我们最近的可信代理追加，
+// 首段可被客户端伪造——不能用作限流 key）。
 func (s *server) clientIP(r *http.Request) string {
 	if s.deps.Cfg.TrustProxy {
+		if cip := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); cip != "" {
+			return cip
+		}
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			if i := strings.IndexByte(xff, ','); i > 0 {
-				return strings.TrimSpace(xff[:i])
-			}
-			return strings.TrimSpace(xff)
+			parts := strings.Split(xff, ",")
+			return strings.TrimSpace(parts[len(parts)-1])
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)

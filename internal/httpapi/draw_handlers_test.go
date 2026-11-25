@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	"good-habit/internal/db"
 )
 
 func loginAs(t *testing.T, h http.Handler, username, password string) *http.Cookie {
@@ -309,6 +311,8 @@ func TestConcurrentDraws(t *testing.T) {
 	if cnt != 5 || sum != -25 {
 		t.Errorf("落盘 = COUNT %d SUM %d, want 5/-25", cnt, sum)
 	}
+	// 并发后的账单余额链必须自洽（不变量 §9.1）
+	assertLedgerChain(t, deps.DBs, s.ChildID)
 }
 
 func TestChooseForeignDraw(t *testing.T) {
@@ -332,5 +336,54 @@ func TestChooseForeignDraw(t *testing.T) {
 	rr = doJSON(h, "POST", apiPath("draws", resp.Draw.UUID)+"/choose", map[string]any{"pick": 0}, kb)
 	if rr.Code != 404 {
 		t.Errorf("跨家庭 choose = %d, want 404", rr.Code)
+	}
+}
+
+// assertLedgerChain 验证不变量 §9.1：按 id 排序的余额链自洽（prev+delta==balance_after）。
+func assertLedgerChain(t *testing.T, dbs *db.DBs, childID int64) {
+	t.Helper()
+	rows, err := dbs.Read.Query(
+		"SELECT delta, balance_after FROM ledger WHERE child_id=? ORDER BY id", childID)
+	if err != nil {
+		t.Fatalf("查链: %v", err)
+	}
+	defer rows.Close()
+	var prev, d, b int64
+	i := 0
+	for rows.Next() {
+		if err := rows.Scan(&d, &b); err != nil {
+			t.Fatalf("scan 链: %v", err)
+		}
+		if prev+d != b {
+			t.Fatalf("第 %d 行链断裂: prev=%d delta=%d balance_after=%d", i, prev, d, b)
+		}
+		prev = b
+		i++
+	}
+	if i == 0 {
+		t.Fatal("链为空")
+	}
+}
+
+func TestDrawRateLimit(t *testing.T) {
+	deps, _, h, s := drawSetup(t, "drawer7")
+	// 余额补足 30+ 次单抽
+	doJSON(h, "POST", "/api/adjustments", map[string]any{
+		"childId": s.ChildID, "delta": 1000, "note": "补足",
+	}, s.Parent)
+
+	for i := 0; i < 30; i++ {
+		rr := doJSON(h, "POST", "/api/draws", map[string]any{"mode": "single"}, s.Child)
+		if rr.Code != 200 {
+			t.Fatalf("第 %d 次抽奖 = %d %s", i+1, rr.Code, rr.Body.String())
+		}
+	}
+	// 第 31 次：每孩子 30 次/分钟 → 429，零副作用
+	rr := doJSON(h, "POST", "/api/draws", map[string]any{"mode": "single"}, s.Child)
+	if rr.Code != 429 || errCode(t, rr) != "rate_limited" {
+		t.Fatalf("第 31 次 = %d %s, want 429 rate_limited", rr.Code, rr.Body.String())
+	}
+	if bal, _, _ := deps.Store.Child(s.ChildID).Stats(); bal != 1100-150 {
+		t.Errorf("限流不应扣费：余额 = %d, want %d", bal, 1100-150)
 	}
 }

@@ -32,14 +32,32 @@ func main() {
 	if err != nil {
 		log.Fatalf("加载配置: %v", err)
 	}
-	a, err := app.New(cfg)
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	if err := run(cfg, sig, func(c config.Config) (serverApp, error) {
+		return app.New(c)
+	}); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// serverApp 是 run 需要的最小应用接口（测试注入 fake 用）。
+type serverApp interface {
+	ListenAndServe() error
+	Shutdown(ctx context.Context) error
+}
+
+// run 启动服务并阻塞到优雅停机完成（含写队列 Drain）后返回。
+// sig/newApp 由调用方注入（main 里是真实信号与 app.New；测试注入可控替身）。
+func run(cfg config.Config, sig <-chan os.Signal, newApp func(config.Config) (serverApp, error)) error {
+	a, err := newApp(cfg)
 	if err != nil {
-		log.Fatalf("启动: %v", err)
+		return fmt.Errorf("启动: %w", err)
 	}
 
+	done := make(chan struct{})
 	go func() {
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 		<-sig
 		slog.Info("收到停机信号，开始 Drain")
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -47,12 +65,15 @@ func main() {
 		if err := a.Shutdown(ctx); err != nil {
 			slog.Error("优雅停机异常", "err", err)
 		}
+		close(done)
 	}()
 
 	if err := a.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("监听: %v", err)
+		return fmt.Errorf("监听: %w", err)
 	}
+	<-done // 等 Drain 完成后才退出进程（否则 SIGTERM 丢已确认的写入）
 	slog.Info("已退出")
+	return nil
 }
 
 func runResetPassword(args []string) {
@@ -81,5 +102,6 @@ func runResetPassword(args []string) {
 	if err := app.ResetPassword(dbs, *user, *newPw); err != nil {
 		log.Fatalf("重置密码: %v", err)
 	}
-	fmt.Printf("用户 %s 的密码已重置（其全部会话已失效）\n", *user)
+	fmt.Printf("用户 %s 的密码已重置（数据库中的会话已删除）\n", *user)
+	fmt.Println("注意：正在运行的服务持有内存会话，请执行 systemctl restart good-habit 使旧会话彻底失效")
 }
