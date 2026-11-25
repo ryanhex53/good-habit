@@ -37,6 +37,11 @@ var (
 
 var usernameRe = regexp.MustCompile(`^[a-z0-9_]{3,32}$`)
 
+// ValidUsername 判断用户名（小写化后）是否合法，供 handler 层细分错误码。
+func ValidUsername(u string) bool {
+	return usernameRe.MatchString(strings.ToLower(strings.TrimSpace(u)))
+}
+
 // Service 承载注册/登录/登出。LockWindow 为同账号失败锁定时长（测试可注入）。
 type Service struct {
 	DBs     *db.DBs

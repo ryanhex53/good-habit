@@ -31,6 +31,7 @@ type Deps struct {
 type server struct {
 	deps           Deps
 	generalLimiter *ratelimit.Limiter
+	authLimiter    *ratelimit.Limiter // /api/auth/*：每 IP 10 次/分钟
 }
 
 func newServer(deps Deps) *server {
@@ -41,6 +42,7 @@ func newServer(deps Deps) *server {
 	return &server{
 		deps:           deps,
 		generalLimiter: ratelimit.New(time.Minute, max),
+		authLimiter:    ratelimit.New(time.Minute, 10),
 	}
 }
 
@@ -48,6 +50,11 @@ func newServer(deps Deps) *server {
 func (s *server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
+
+	mux.HandleFunc("POST /api/auth/register", s.handleRegister)
+	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
+	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
+	mux.HandleFunc("GET /api/me", s.handleMe)
 	// 后续任务在此追加 /api/* 路由
 	return mux
 }
