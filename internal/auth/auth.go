@@ -145,6 +145,12 @@ func (a *Service) Register(username, password, familyName string) (store.Session
 	if err != nil {
 		return store.Session{}, err
 	}
+	// 新家庭立即建立内存空快照（默认定价 5/7），热路径立刻可用
+	a.Store.SetFamily(&store.FamilyConfig{
+		FamilyID:   familyID,
+		SingleCost: 5,
+		DoubleCost: 7,
+	})
 	return a.establishSession(userID, familyID, "parent")
 }
 
