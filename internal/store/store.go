@@ -31,13 +31,15 @@ type FamilyConfig struct {
 	DoubleCost int64
 }
 
-// Session 是内存会话。
+// Session 是内存会话。TokenHash 是持久身份（DB 主键）；
+// Token 仅在 auth 建会话时随返回值带给 handler 写 cookie，不入库、不驻留。
 type Session struct {
 	TokenHash string
 	UserID    int64
 	FamilyID  int64
 	Role      string // "parent" | "child"
 	ExpiresAt int64
+	Token     string // 传递用：仅 establishSession 返回时非空
 }
 
 // ChildAcct 是一个孩子账户的热状态。Balance/PendingUUID/Unfulfilled
