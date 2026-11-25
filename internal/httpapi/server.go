@@ -55,6 +55,10 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
 	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
 	mux.HandleFunc("GET /api/me", s.handleMe)
+
+	mux.HandleFunc("GET /api/children", RequireRole("parent", s.handleChildrenList))
+	mux.HandleFunc("POST /api/children", RequireRole("parent", s.handleChildCreate))
+	mux.HandleFunc("PATCH /api/children/{id}", RequireRole("parent", s.handleChildUpdate))
 	// 后续任务在此追加 /api/* 路由
 	return mux
 }

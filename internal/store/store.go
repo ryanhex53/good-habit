@@ -58,6 +58,13 @@ func (c *ChildAcct) Lock() { c.mu.Lock() }
 // Unlock 释放孩子互斥锁。
 func (c *ChildAcct) Unlock() { c.mu.Unlock() }
 
+// Bal 加锁读余额（展示/列表路径用）。
+func (c *ChildAcct) Bal() int64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.Balance
+}
+
 // Store 聚合全部内存热状态。
 type Store struct {
 	children  sync.Map // map[int64]*ChildAcct
@@ -115,6 +122,16 @@ func (s *Store) GetSession(tokenHash string) (Session, bool) {
 
 // DeleteSession 删除内存会话。
 func (s *Store) DeleteSession(tokenHash string) { s.sessions.Delete(tokenHash) }
+
+// DeleteSessionsForUser 删除某用户的全部内存会话（停用账号时调用）。
+func (s *Store) DeleteSessionsForUser(userID int64) {
+	s.sessions.Range(func(k, v any) bool {
+		if sess, ok := v.(Session); ok && sess.UserID == userID {
+			s.sessions.Delete(k)
+		}
+		return true
+	})
+}
 
 // BumpEarnsToday 给家庭当日得分笔数 +1。
 func (s *Store) BumpEarnsToday(familyID int64, dayKey string) {
