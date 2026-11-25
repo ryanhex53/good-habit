@@ -85,6 +85,66 @@ func (s *Store) loadChildren(dbs *db.DBs) error {
 		c.Balance = r.sum
 		c.mu.Unlock()
 	}
+
+	// 恢复待选局指针（规则保证每孩子至多一局）
+	prows, err := dbs.Read.Query(
+		"SELECT uuid, child_id, created_at + 172800000 FROM draws WHERE state='pending_choice'")
+	if err != nil {
+		return fmt.Errorf("查待选局: %w", err)
+	}
+	type pendT struct {
+		uuid     string
+		childID  int64
+		deadline int64
+	}
+	var pends []pendT
+	for prows.Next() {
+		var p pendT
+		if err := prows.Scan(&p.uuid, &p.childID, &p.deadline); err != nil {
+			prows.Close()
+			return fmt.Errorf("scan 待选局: %w", err)
+		}
+		pends = append(pends, p)
+	}
+	prows.Close()
+	for _, p := range pends {
+		if v, ok := s.children.Load(p.childID); ok {
+			c := v.(*ChildAcct)
+			c.mu.Lock()
+			c.PendingUUID = p.uuid
+			c.PendingDeadline = p.deadline
+			c.mu.Unlock()
+		}
+	}
+
+	// 恢复待发放计数
+	urows, err := dbs.Read.Query(
+		"SELECT child_id, COUNT(*) FROM draws WHERE state='completed' AND fulfilled_at IS NULL GROUP BY child_id")
+	if err != nil {
+		return fmt.Errorf("查待发放: %w", err)
+	}
+	type unfulT struct {
+		childID int64
+		n       int64
+	}
+	var unfuls []unfulT
+	for urows.Next() {
+		var u unfulT
+		if err := urows.Scan(&u.childID, &u.n); err != nil {
+			urows.Close()
+			return fmt.Errorf("scan 待发放: %w", err)
+		}
+		unfuls = append(unfuls, u)
+	}
+	urows.Close()
+	for _, u := range unfuls {
+		if v, ok := s.children.Load(u.childID); ok {
+			c := v.(*ChildAcct)
+			c.mu.Lock()
+			c.Unfulfilled = u.n
+			c.mu.Unlock()
+		}
+	}
 	return nil
 }
 
