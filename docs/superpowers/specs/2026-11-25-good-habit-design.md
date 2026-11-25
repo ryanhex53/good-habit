@@ -86,6 +86,7 @@
 - **单抽**：扣 `single_draw_cost` → 等概率随机抽一个启用奖品 → 必中。账单记 `kind=draw`，delta = -cost，关联 draw 记录。
 - **保险抽（双抽）**：扣 `double_draw_cost` → 服务端一次算出两个（独立等概率）结果 A/B → 返回 `state=pending_choice`；前端转盘转两轮分别揭示 A、B，孩子挑一个（另一作废）；若中途离开，首页顶部常驻"有一局待选奖品"横幅可回来继续；**超 48 小时未选自动保留 A**（启动时与每小时清扫）。
 - 扣费在发起时一次完成，选择环节不再扣/退分。
+- **同一孩子同时至多一局未选**：存在 `pending_choice` 时发起新抽奖一律 409（`pending_choice_exists`），先完成选择（或超时自动保留 A）才能再抽。
 - 余额不足：发起即拒绝（409），不产生任何账单。
 - 每抽必中；家长想设"谢谢参与"，自己建一个 0 价值占位奖品即可。
 
@@ -105,7 +106,7 @@
 - `/login`、`/register`。
 
 **孩子端 `/kid`**（手机优先，活泼风格，底部 Tab 导航）
-- 首页：大号余额卡 + 今日待办提示（可选积分项快捷入口）+ "待选奖品"横幅（如有 pending_choice）。
+- 首页：大号余额卡 + 得分指南（只读列出启用中的积分项：标题 + 分值，让孩子知道做什么能得分；点击无操作，登记永远由家长完成）+ "待选奖品"横幅（如有 pending_choice，至多一局）。
 - 转盘页：Canvas 转盘（均分扇区，emoji + 名称，指针在顶），单抽/保险抽两个按钮（价格实时显示），~4s 缓动动画 → 结果弹窗；双抽为两轮动画 + 双卡片二选一。
 - 账单页：时间线列表（±分、奖品、当时余额），下拉加载更多。
 
@@ -149,7 +150,7 @@
 | 配置快照 | `atomic.Pointer[FamilyConfig]`（积分项/奖品/定价整体副本） | 读无锁；家长 CRUD 走同步写库后整体替换指针（copy-on-write） |
 | 会话 | `sync.Map[tokenHash]session` + TTL | 登录/登出异步落库，重启时从 DB 恢复 |
 | 限流计数 | 分片 map + `atomic` 定长窗口计数 | 后台协程周期 GC |
-| 待选抽奖（pending_choice） | 挂在 childAcct 上 + DB | 供首页横幅与恢复 |
+| 待选抽奖（pending_choice） | childAcct 上单一指针（规则保证至多一局）+ DB | 供首页横幅与恢复 |
 
 - 启动时从 DB 重建：余额（`users.balance`，并与账单 SUM 校验，不一致以账单为准并修复）、会话、全部家庭配置快照。
 
@@ -291,9 +292,10 @@ CREATE TABLE schema_migrations (
 - `GET|PUT /wheel-config` `{single_draw_cost,double_draw_cost}`
 - `GET /draws?state=unfulfilled&child_id=`，`PATCH /draws/:id/fulfill`
 - `GET /ledger?child_id=&before=&limit=30`（ReadDB，游标分页）
-- `GET /overview`（各孩子余额、待发放数、今日笔数——内存直读）
+- `GET /overview`（各孩子余额、待发放数、今日得分笔数——内存直读；"今日"按服务器本地时区日界计算，可用 `GOODHABIT_DAY_TZ`（IANA 时区名）覆盖）
 
-**孩子（家长可代查）**
+**孩子（仅 child 会话可用；家长不代替孩子抽奖，查看孩子数据走家长端接口）**
+- `GET /guide`（只读：本家庭启用积分项列表，内存快照，供首页"得分指南"）
 - `GET /wheel`（奖品快照 + 两档价格 + 余额 + pending_choice 抽奖如有）
 - `POST /draws` `{mode:'single'|'double'}`（热路径；返回结果/两个候选）
 - `POST /draws/:id/choose` `{pick:0|1}`
@@ -301,7 +303,8 @@ CREATE TABLE schema_migrations (
 
 **其它**
 - `GET /healthz`（存活/就绪，供 systemd watchdog）
-- 错误约定：`{"error":{"code":"...","message":"..."}}`，业务冲突（余额不足、无奖品、重名、锁定）用 409/4xx，代码可枚举。
+- 错误约定：`{"error":{"code":"...","message":"..."}}`，业务冲突（余额不足 `insufficient_points`、无启用奖品 `no_active_prizes`、有待选局 `pending_choice_exists`、用户名已存在、账号锁定）用 409/4xx，代码可枚举。
+- 所有 `DELETE` 均为软删除（置 `active=0`，`PATCH` 可恢复）；账单与抽奖历史永不物理删除。
 
 ## 9. 一致性与容灾
 
@@ -323,7 +326,7 @@ CREATE TABLE schema_migrations (
 ## 10. 认证与安全
 - 密码 bcrypt（`golang.org/x/crypto/bcrypt`，cost 10；纯 Go 库，非中间件）。
 - 会话 token 32 字节 crypto/rand → base64url；Cookie `HttpOnly + SameSite=Strict + Path=/`，`Secure` 由 `GOODHABIT_SECURE_COOKIE` 控制（TLS 反代后开启）；DB 只存 sha256(token)。30 天滑动续期。
-- 权限：child 一律只能读写自己；parent 可读写本家庭全部；所有查询带 family_id 过滤（数据隔离的反目标红线）。
+- 权限：child 一律只能读写自己；parent 管理与查看本家庭全部数据；`/wheel`、`POST /draws`、`POST /draws/:id/choose` 为 child 会话专用（家长不代抽）。所有查询带 family_id 过滤（数据隔离的反目标红线）。
 - 输入校验：用户名字符集、长度、密码长度、分值/价格范围、分页上限。
 - 应用只说 HTTP；**公开部署必须在前面挂 TLS**（Cloudflare Tunnel/Caddy 皆可，属部署件而非应用依赖）；systemd 示例默认绑定 127.0.0.1。
 - 注册无邮箱验证（自部署 + 限流下接受；反目标：引入 SMTP）。
@@ -374,6 +377,38 @@ CREATE TABLE schema_migrations (
 6. 手动调整、CLI 重置密码、示例数据一键导入。
 7. 限流阈值（§6.8）、会话 30 天、bcrypt cost 10、busy_timeout 数值。
 8. `users.balance` 冗余列 + 启动对账（账单 SUM 为准）。
+9. 待选双抽**同时至多一局**（存在 pending_choice 时拒绝新抽奖，409 `pending_choice_exists`）。
+10. 抽奖/选择/转盘接口仅 child 会话可用；家长不代抽（家长查看孩子数据走家长端接口）。
+11. "今日"= 服务器本地时区日界（`GOODHABIT_DAY_TZ` 可覆盖）；孩子首页的"得分指南"为只读列表，无打卡状态。
+12. 引导导入的种子数据见附录 A（内容取自需求原文，标题照抄）。
 
 **遗留待用户确认（builder check 后汇总提问）**
-- 暂无（如评审提出只有用户能定的问题，将在交付文档时一并列出）。
+- 无。评审提出的 4 个缺口已全部闭合：种子数据取自需求原文（附录 A）；其余 3 项按上面第 9–11 条裁量定案（审阅时可否决）。
+
+## 附录 A：一键导入种子数据（原文来自需求）
+
+**积分项（11 项）**
+
+| 标题 | 分值 |
+|---|---|
+| 托管课写完作业 | 7 |
+| 上喜课经过审核 | 5 |
+| 额外作业 | 10 |
+| 被老师表扬 | 5 |
+| 考试单科第一 | 10 |
+| 1个鸡蛋 | 5 |
+| 1盒牛奶 | 5 |
+| 720完成起床 | 5 |
+| 早读10分钟 | 5 |
+| 945上床睡觉 | 5 |
+| 背诵1篇英语短文 | 5 |
+
+**转盘奖品（3 项）**
+
+| 名称 | emoji |
+|---|---|
+| 水果糖1颗 | 🍬 |
+| 巧克力1颗 | 🍫 |
+| 自选零食1袋 | 🥨 |
+
+**定价默认**：单抽 5 分、保险双抽 7 分（家长可改）。
