@@ -65,6 +65,13 @@ func (c *ChildAcct) Bal() int64 {
 	return c.Balance
 }
 
+// Stats 加锁读全部热状态（测试与家长总览用）。
+func (c *ChildAcct) Stats() (balance int64, pendingUUID string, unfulfilled int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.Balance, c.PendingUUID, c.Unfulfilled
+}
+
 // Store 聚合全部内存热状态。
 type Store struct {
 	children  sync.Map // map[int64]*ChildAcct

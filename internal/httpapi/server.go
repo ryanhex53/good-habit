@@ -17,11 +17,13 @@ import (
 
 // Deps 是 httpapi 的全部依赖注入。
 type Deps struct {
-	Cfg    config.Config
-	DBs    *db.DBs
-	Store  *store.Store
-	Auth   *auth.Service
+	Cfg     config.Config
+	DBs     *db.DBs
+	Store   *store.Store
+	Auth    *auth.Service
 	Enqueue func(ledger.Op)
+	// Flush 是组提交屏障（写后读路径用；nil = 无 writer，跳过屏障）。
+	Flush func() error
 
 	// RateGeneral 是每 IP 每分钟全局请求上限；0 → 240。
 	RateGeneral int64
@@ -32,6 +34,7 @@ type server struct {
 	deps           Deps
 	generalLimiter *ratelimit.Limiter
 	authLimiter    *ratelimit.Limiter // /api/auth/*：每 IP 10 次/分钟
+	draw           *drawService
 }
 
 func newServer(deps Deps) *server {
@@ -43,6 +46,7 @@ func newServer(deps Deps) *server {
 		deps:           deps,
 		generalLimiter: ratelimit.New(time.Minute, max),
 		authLimiter:    ratelimit.New(time.Minute, 10),
+		draw:           newDrawService(deps),
 	}
 }
 
@@ -77,6 +81,10 @@ func (s *server) routes() *http.ServeMux {
 
 	mux.HandleFunc("POST /api/earnings", RequireRole("parent", s.handleEarning))
 	mux.HandleFunc("POST /api/adjustments", RequireRole("parent", s.handleAdjustment))
+
+	mux.HandleFunc("POST /api/draws", RequireRole("child", s.handleDraw))
+	mux.HandleFunc("POST /api/draws/{uuid}/choose", RequireRole("child", s.handleChoose))
+	mux.HandleFunc("PATCH /api/draws/{uuid}/fulfill", RequireRole("parent", s.handleFulfill))
 	// 后续任务在此追加 /api/* 路由
 	return mux
 }

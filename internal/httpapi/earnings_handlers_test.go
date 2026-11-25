@@ -51,6 +51,7 @@ func newDepsWithWriter(t *testing.T) (Deps, *writer.Writer) {
 		Store:   st,
 		Auth:    svc,
 		Enqueue: enq,
+		Flush:   w.Flush,
 	}, w
 }
 

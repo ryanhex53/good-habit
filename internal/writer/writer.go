@@ -6,6 +6,7 @@ package writer
 
 import (
 	"database/sql"
+	"errors"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -100,6 +101,27 @@ func (w *Writer) Stop() error {
 // Commits 返回已提交的事务批数（测试钩子）。
 func (w *Writer) Commits() int64 { return w.commits.Load() }
 
+// Flush 是提交屏障：把当前已入队（含本调用）的全部事件落盘后返回。
+// 供"写后读"路径（如 choose 需要看到刚入队的 draws 行）使用。
+func (w *Writer) Flush() error {
+	if w.stopping.Load() {
+		return errors.New("writer: Flush after Stop")
+	}
+	done := make(chan struct{})
+	w.events <- &flushSignal{done: done}
+	select {
+	case <-done:
+		return nil
+	case <-time.After(5 * time.Second):
+		return errors.New("writer: Flush 超时")
+	}
+}
+
+// flushSignal 是零副作用哨兵：随批提交后关闭 done，实现 Flush 屏障。
+type flushSignal struct{ done chan struct{} }
+
+func (f *flushSignal) Apply(tx *sql.Tx) error { return nil }
+
 func (w *Writer) loop() {
 	defer close(w.doneCh)
 	ticker := time.NewTicker(w.flushInterval)
@@ -152,6 +174,12 @@ func (w *Writer) flush(batch []ledger.Op) {
 		return nil
 	})
 	w.commits.Add(1)
+	// 屏障信号：无论成败都要放行等待者
+	for _, op := range batch {
+		if sig, ok := op.(*flushSignal); ok {
+			close(sig.done)
+		}
+	}
 	if err != nil {
 		w.errMu.Lock()
 		w.flushErr = err
