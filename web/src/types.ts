@@ -70,6 +70,64 @@ export interface ChooseResp {
   }
 }
 
+// 家长端（Task 11/12/14/16 契约）
+export interface ChildView {
+  id: number
+  username: string
+  displayName: string
+  balance: number
+  active: boolean
+}
+
+export interface ItemView {
+  id: number
+  title: string
+  points: number
+  active: boolean
+  sort: number
+}
+
+export interface PrizeAdminView {
+  id: number
+  name: string
+  emoji: string
+  active: boolean
+  sort: number
+}
+
+export interface OverviewChild {
+  id: number
+  displayName: string
+  balance: number
+  unfulfilled: number
+  hasPending: boolean
+}
+
+export interface OverviewInfo {
+  children: OverviewChild[]
+  todayEarns: number
+}
+
+export interface DrawListItem {
+  uuid: string
+  childName: string
+  mode: string
+  cost: number
+  prizeName: string
+  state: string
+  fulfilledAt: number
+  createdAt: number
+}
+
+export interface EntryResp {
+  entry: {
+    delta: number
+    balanceAfter: number
+    kind: string
+    itemTitle?: string
+  }
+}
+
 // fmtTime：Unix 毫秒 → "M/D HH:mm"（浏览器本地时区）。
 export function fmtTime(ms: number): string {
   const d = new Date(ms)
