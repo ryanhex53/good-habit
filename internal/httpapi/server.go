@@ -85,7 +85,12 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc("POST /api/draws", RequireRole("child", s.handleDraw))
 	mux.HandleFunc("POST /api/draws/{uuid}/choose", RequireRole("child", s.handleChoose))
 	mux.HandleFunc("PATCH /api/draws/{uuid}/fulfill", RequireRole("parent", s.handleFulfill))
-	// 后续任务在此追加 /api/* 路由
+
+	mux.HandleFunc("GET /api/guide", RequireRole("child", s.handleGuide))
+	mux.HandleFunc("GET /api/wheel", RequireRole("child", s.handleWheel))
+	mux.HandleFunc("GET /api/overview", RequireRole("parent", s.handleOverview))
+	mux.HandleFunc("GET /api/ledger", s.handleLedger) // 双角色：child 限自己 / parent 全家
+	mux.HandleFunc("GET /api/draws", RequireRole("parent", s.handleDrawsList))
 	return mux
 }
 
