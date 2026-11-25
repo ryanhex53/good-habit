@@ -44,6 +44,32 @@ export interface LedgerPage {
   nextBefore: number | null
 }
 
+// 抽奖响应（Task 15 契约）
+export interface DrawEntryInfo {
+  delta: number
+  balanceAfter: number
+  kind: string
+}
+
+export interface DrawResp {
+  draw: {
+    uuid: string
+    mode: string
+    state: string
+    prize?: Prize
+    choices?: Prize[]
+  }
+  entry: DrawEntryInfo
+}
+
+export interface ChooseResp {
+  draw: {
+    uuid: string
+    prize: Prize
+    state: string
+  }
+}
+
 // fmtTime：Unix 毫秒 → "M/D HH:mm"（浏览器本地时区）。
 export function fmtTime(ms: number): string {
   const d = new Date(ms)
