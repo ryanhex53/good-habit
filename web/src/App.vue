@@ -1,5 +1,10 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import ToastHost from './components/ui/ToastHost.vue'
+import DialogHost from './components/ui/DialogHost.vue'
+</script>
 
 <template>
   <RouterView />
+  <ToastHost />
+  <DialogHost />
 </template>

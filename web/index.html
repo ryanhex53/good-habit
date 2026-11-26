@@ -1,10 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>web</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="好习惯——家庭积分与转盘奖励：孩子做任务攒积分，转盘抽惊喜。" />
+    <meta name="theme-color" content="#f6f2ec" />
+    <script>
+      // 首屏前应用已保存的主题，避免深色用户看到闪白（与 useTheme.ts 同语义）
+      ;(function () {
+        try {
+          var s = localStorage.getItem('gh-theme')
+          var t =
+            s === 'light' || s === 'dark'
+              ? s
+              : matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+          document.documentElement.setAttribute('data-theme', t)
+          var m = document.querySelector('meta[name="theme-color"]')
+          if (m) m.setAttribute('content', t === 'dark' ? '#1b1917' : '#f6f2ec')
+        } catch (e) {}
+      })()
+    </script>
+    <title>好习惯</title>
   </head>
   <body>
     <div id="app"></div>
