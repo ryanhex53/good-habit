@@ -494,7 +494,8 @@ check('selected chip: tinted, brand-ink text, aria-pressed', sel[2] == 'true' an
 check('unselected chip has aria-pressed=false', js("document.querySelectorAll('button[aria-pressed=\"false\"]').length") == 1)
 tile = js("(() => { const b = document.querySelector('.grid button.btn'); const n = b.querySelector('.text-stat'); const t = b.lastElementChild; return [getComputedStyle(b).backgroundColor, getComputedStyle(n).fontSize, getComputedStyle(t).fontSize, n.textContent.replace(/\\s+/g, '')]; })()")
 check('tile: white, number 28px, title 14px', tile[0] == 'rgb(255, 255, 255)' and tile[1] == '28px' and tile[2] == '14px' and tile[3] == '+7分', tile)
-check('adjust button is outlined', bool(rect('main .btn-outline')) and style('main .btn-outline', 'background-color') == 'rgba(0, 0, 0, 0)', style('main .btn-outline', 'background-color'))
+js("(() => { const c = document.querySelector('main .btn-outline').closest('.surface'); const n = c.querySelector('input[type=number]'); const t = c.querySelector('input:not([type=number])'); n.value = '-5'; n.dispatchEvent(new Event('input', { bubbles: true })); t.value = '验证'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()")   # 空字段时按钮必然禁用，而 daisyUI 把所有禁用按钮统一渲染成 10% 着色，看不出是否 outline——填上字段让它启用再量
+check('adjust button is outlined (enabled)', wait_for("!document.querySelector('main .btn-outline').disabled") and style('main .btn-outline', 'background-color') == 'rgba(0, 0, 0, 0)', (style('main .btn-outline', 'background-color'), style('main .btn-outline', 'border-top-color')))
 check('inputs have visible labels', texts('main label.field-label') == ['备注（可不填）', '分值', '原因'], texts('main label.field-label'))
 hook_fetch('e')
 js("document.querySelector('.grid button.btn').click(); true"); wait_for("!!document.querySelector('dialog[open]')")
@@ -525,7 +526,7 @@ check('chip rolls to 54', wait_for("(() => { const e = document.querySelector('b
 reduced_motion(True); go('/parent/earn', 'light'); wait_for("document.querySelectorAll('.grid button.btn').length === 11")
 js("document.querySelector('.grid button.btn').click(); true"); wait_for("!!document.querySelector('dialog[open]')")
 js("document.querySelector('dialog[open] .modal-action .btn-primary').click(); true"); time.sleep(0.4)
-check('reduced motion: no float chip, value at once', count('.float-chip') == 0 and text('button[aria-pressed="true"] [aria-hidden="true"]') == '54', (count('.float-chip'), text('button[aria-pressed="true"] [aria-hidden="true"]')))
+check('reduced motion: no float chip, value at once', count('.float-chip') == 0 and text('button[aria-pressed="true"] [aria-hidden="true"]') == '61', (count('.float-chip'), text('button[aria-pressed="true"] [aria-hidden="true"]')))   # 47 + 7（前面已登记一次）+ 7 = 61
 reduced_motion(False)
 new_child('名字特别长的一个孩子')
 go('/parent/earn', 'light'); wait_for("document.querySelectorAll('.grid button.btn').length === 11")
