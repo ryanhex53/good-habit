@@ -617,10 +617,11 @@ no_horizontal_scroll(360)
 - [ ] **Step 2: 跑全量检查**
 
 ```python
+init_stub_raf()   # 页面脚本运行前把 requestAnimationFrame 换成定时器：主数字的进场滚动、转盘画布在被遮挡的窗口里才能推进；定时器被节流到约 1s 一跳，所以下面等 1.2s 再截图
 def snap(path, name):
     for theme in ('light', 'dark'):
-        vp(390, 844, 1, True); go(path, theme); time.sleep(0.6); shot('t10-%s-m-%s' % (name, theme), settle=0.2)
-        vp(1280, 820, 1, False); go(path, theme); time.sleep(0.6); shot('t10-%s-d-%s' % (name, theme), settle=0.2)
+        vp(390, 844, 1, True); go(path, theme); time.sleep(1.2); shot('t10-%s-m-%s' % (name, theme), settle=0.2)
+        vp(1280, 820, 1, False); go(path, theme); time.sleep(1.2); shot('t10-%s-d-%s' % (name, theme), settle=0.2)
 login('yu')
 for path, name in [('/kid/home', 'kid-home'), ('/kid/wheel', 'kid-wheel'), ('/kid/bills', 'kid-bills')]:
     snap(path, name)
