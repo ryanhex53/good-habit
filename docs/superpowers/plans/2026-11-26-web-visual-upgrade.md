@@ -219,7 +219,7 @@ shot('t3-draws-empty-d-light')
 
 - [ ] **Step 3: 静态核对**
 
-  Run: `grep -nE 'shadow-(sm|md|lg)' web/src/components/ui/ || echo none`
+  Run: `grep -rnE 'shadow-(sm|md|lg)' web/src/components/ui/ || echo none`
   Expected: 输出 `none`。
 
 - [ ] **Step 4: 重建、跑出绿、看截图**（`t3-items-d-light`、`t3-items-m-light`、`t3-children-d-light`、`t3-confirm-d-light`、`t3-confirm-m-light`、`t3-draws-empty-d-light`）
