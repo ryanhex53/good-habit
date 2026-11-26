@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api, errMsg } from '../../api'
+import { useDialogs } from '../../composables/useDialogs'
+import { useToast } from '../../composables/useToast'
+import RowCard from '../../components/ui/RowCard.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
 import type { ChildView } from '../../types'
 
 const children = ref<ChildView[]>([])
 const error = ref('')
-const toast = ref('')
 
 const newName = ref('')
 const newPw = ref('')
 const newDisp = ref('')
 
-function flash(msg: string) {
-  toast.value = msg
-  setTimeout(() => (toast.value = ''), 2200)
-}
+const dialogs = useDialogs()
+const toast = useToast()
 
 async function load() {
   children.value = (await api<{ children: ChildView[] }>('GET', '/api/children')).children
@@ -28,7 +29,7 @@ async function create() {
       password: newPw.value,
       displayName: newDisp.value,
     })
-    flash(`已创建 ${newDisp.value}`)
+    toast.show(`已创建 ${newDisp.value}`, 2200)
     newName.value = ''
     newPw.value = ''
     newDisp.value = ''
@@ -39,7 +40,7 @@ async function create() {
 }
 
 async function rename(c: ChildView) {
-  const name = prompt('新昵称', c.displayName)
+  const name = await dialogs.prompt({ title: '修改昵称', label: '新昵称', value: c.displayName })
   if (!name || name.trim() === '') return
   try {
     await api('PATCH', `/api/children/${c.id}`, { displayName: name.trim() })
@@ -50,11 +51,16 @@ async function rename(c: ChildView) {
 }
 
 async function resetPw(c: ChildView) {
-  const pw = prompt(`给 ${c.displayName} 设新密码（至少 8 位）`)
+  const pw = await dialogs.prompt({
+    title: '重置密码',
+    label: `给 ${c.displayName} 设新密码（至少 8 位）`,
+    type: 'password',
+    autocomplete: 'new-password',
+  })
   if (!pw) return
   try {
     await api('PATCH', `/api/children/${c.id}`, { password: pw })
-    flash(`${c.displayName} 的密码已重置`)
+    toast.show(`${c.displayName} 的密码已重置`, 2200)
   } catch (e) {
     error.value = errMsg(e)
   }
@@ -63,7 +69,13 @@ async function resetPw(c: ChildView) {
 async function toggleActive(c: ChildView) {
   const to = !c.active
   const verb = to ? '恢复' : '停用'
-  if (!confirm(`确定${verb} ${c.displayName} 吗？${to === false ? '停用后其会话立即失效。' : ''}`)) return
+  const ok = await dialogs.confirm({
+    title: `${verb} ${c.displayName}`,
+    message: `确定${verb} ${c.displayName} 吗？${to === false ? '停用后其会话立即失效。' : ''}`,
+    confirmText: verb,
+    tone: to ? 'primary' : 'error',
+  })
+  if (!ok) return
   try {
     await api('PATCH', `/api/children/${c.id}`, { active: to })
     load()
@@ -77,98 +89,60 @@ onMounted(load)
 
 <template>
   <div>
-    <h2>孩子管理</h2>
-    <p class="err">{{ error }}</p>
-    <p v-if="toast" class="ok-note">{{ toast }}</p>
+    <PageHeader title="孩子管理" />
+    <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
 
-    <div class="card add">
-      <h3>添加孩子</h3>
-      <div class="add-row">
-        <input v-model="newDisp" placeholder="昵称（必填）" />
-        <input v-model="newName" placeholder="登录用户名" />
-        <input v-model="newPw" type="password" placeholder="初始密码（≥8 位）" />
-        <button :disabled="!newDisp || !newName || !newPw" @click="create">创建</button>
+    <div class="card border border-base-300 bg-base-100 shadow-sm">
+      <div class="card-body gap-3">
+        <h3 class="text-base font-bold">添加孩子</h3>
+        <div class="flex flex-wrap gap-2">
+          <input
+            v-model="newDisp"
+            class="input min-w-36 flex-1 text-base max-lg:input-lg"
+            placeholder="昵称（必填）"
+          />
+          <input
+            v-model="newName"
+            class="input min-w-36 flex-1 text-base max-lg:input-lg"
+            placeholder="登录用户名"
+          />
+          <input
+            v-model="newPw"
+            type="password"
+            class="input min-w-36 flex-1 text-base max-lg:input-lg"
+            placeholder="初始密码（≥8 位）"
+          />
+          <button
+            class="btn btn-primary max-lg:btn-lg"
+            :disabled="!newDisp || !newName || !newPw"
+            @click="create"
+          >
+            创建
+          </button>
+        </div>
+        <p class="text-xs text-base-content/50">
+          孩子用自己的用户名密码登录，只能看到自己的数据
+        </p>
       </div>
-      <p class="hint">孩子用自己的用户名密码登录，只能看到自己的数据</p>
     </div>
 
-    <div class="list">
-      <div v-for="c in children" :key="c.id" class="card row" :class="{ off: !c.active }">
-        <div class="info">
-          <p class="name">
-            {{ c.displayName }}
-            <em v-if="!c.active" class="tag">已停用</em>
-          </p>
-          <p class="sub">{{ c.username }} · {{ c.balance }} 分</p>
-        </div>
-        <div class="ops">
-          <button class="ghost" @click="rename(c)">改名</button>
-          <button class="ghost" @click="resetPw(c)">重置密码</button>
-          <button class="ghost" @click="toggleActive(c)">{{ c.active ? '停用' : '恢复' }}</button>
-        </div>
-      </div>
+    <div class="mt-4 flex flex-col gap-3">
+      <RowCard v-for="c in children" :key="c.id" :class="!c.active ? 'opacity-60' : ''">
+        <p class="font-bold">
+          {{ c.displayName }}
+          <em v-if="!c.active" class="badge badge-ghost badge-sm ml-1 not-italic">已停用</em>
+        </p>
+        <p class="text-xs text-base-content/60">{{ c.username }} · {{ c.balance }} 分</p>
+        <template #actions>
+          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="rename(c)">改名</button>
+          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="resetPw(c)">
+            重置密码
+          </button>
+          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="toggleActive(c)">
+            {{ c.active ? '停用' : '恢复' }}
+          </button>
+        </template>
+      </RowCard>
     </div>
   </div>
 </template>
-
-<style scoped>
-h2 {
-  margin-bottom: 14px;
-}
-.add h3 {
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-.add-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.add-row input {
-  flex: 1;
-  min-width: 140px;
-}
-.hint {
-  font-size: 13px;
-  color: var(--c-sub);
-  margin-top: 8px;
-}
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 14px;
-}
-.row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.row.off {
-  opacity: 0.6;
-}
-.name {
-  font-size: 17px;
-  font-weight: 700;
-}
-.tag {
-  font-style: normal;
-  font-size: 12px;
-  color: var(--c-warn);
-  margin-left: 6px;
-}
-.sub {
-  font-size: 13px;
-  color: var(--c-sub);
-}
-.ops {
-  display: flex;
-  gap: 8px;
-}
-.ops .ghost {
-  padding: 7px 12px;
-  font-size: 13px;
-}
-</style>

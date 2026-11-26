@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import BaseDialog from './BaseDialog.vue'
 import { useDialogs } from '../../composables/useDialogs'
 
 // 常驻组件：state.prompt 非空时挂载 BaseDialog。
-// 语义对齐原生 prompt()：Enter 提交、空值不给确定、取消/Esc/遮罩 → null。
+// 语义对齐原生 prompt()：Enter 提交、空值不给确定（allowEmpty 例外）、取消/Esc/遮罩 → null。
 const { state, resolvePrompt } = useDialogs()
-const value = ref('')
+const value = ref<string | number>('')
 const inputEl = ref<HTMLInputElement | null>(null)
+
+// type="number" 的 v-model 会被 Vue 自动转为 number，统一归一成字符串
+const text = computed(() => String(value.value ?? '').trim())
 
 watch(
   () => state.prompt,
@@ -22,8 +25,8 @@ watch(
 )
 
 function submit(): void {
-  if (value.value.trim() === '') return
-  resolvePrompt(value.value.trim())
+  if (text.value === '' && !state.prompt?.allowEmpty) return
+  resolvePrompt(text.value)
 }
 </script>
 
@@ -41,13 +44,17 @@ function submit(): void {
         class="input w-full text-base max-lg:input-lg"
         :type="state.prompt.type ?? 'text'"
         :placeholder="state.prompt.placeholder"
-        autocomplete="off"
+        :autocomplete="state.prompt.autocomplete ?? 'off'"
       />
       <div class="modal-action">
         <button type="button" class="btn btn-ghost max-lg:btn-lg" @click="resolvePrompt(null)">
           取消
         </button>
-        <button type="submit" class="btn btn-primary max-lg:btn-lg" :disabled="!value.trim()">
+        <button
+          type="submit"
+          class="btn btn-primary max-lg:btn-lg"
+          :disabled="!text && !state.prompt?.allowEmpty"
+        >
           {{ state.prompt.confirmText ?? '确定' }}
         </button>
       </div>

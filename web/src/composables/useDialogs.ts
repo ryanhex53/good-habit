@@ -7,6 +7,9 @@ export interface PromptOptions {
   placeholder?: string
   type?: string
   confirmText?: string
+  /** 允许提交空值（对齐原生 prompt 可提交空串的语义，如 emoji 留空重置） */
+  allowEmpty?: boolean
+  autocomplete?: string
 }
 
 export interface ConfirmOptions {

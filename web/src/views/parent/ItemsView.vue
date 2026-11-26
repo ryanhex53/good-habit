@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api, errMsg } from '../../api'
+import { useDialogs } from '../../composables/useDialogs'
+import EmptyState from '../../components/ui/EmptyState.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import RowCard from '../../components/ui/RowCard.vue'
 import type { ItemView } from '../../types'
 
 const items = ref<ItemView[]>([])
 const error = ref('')
 const newTitle = ref('')
 const newPoints = ref<number | null>(null)
+
+const dialogs = useDialogs()
 
 async function load() {
   items.value = (await api<{ items: ItemView[] }>('GET', '/api/reward-items')).items
@@ -37,7 +43,12 @@ async function toggle(it: ItemView) {
 }
 
 async function editPoints(it: ItemView) {
-  const v = prompt(`把「${it.title}」的分值改为：`, String(it.points))
+  const v = await dialogs.prompt({
+    title: '修改分值',
+    label: `把「${it.title}」的分值改为：`,
+    value: String(it.points),
+    type: 'number',
+  })
   if (!v) return
   const n = Number(v)
   if (!Number.isInteger(n) || n < 1) {
@@ -53,7 +64,7 @@ async function editPoints(it: ItemView) {
 }
 
 async function rename(it: ItemView) {
-  const title = prompt('新标题：', it.title)
+  const title = await dialogs.prompt({ title: '修改标题', label: '新标题', value: it.title })
   if (!title || title.trim() === '') return
   try {
     await api('PATCH', `/api/reward-items/${it.id}`, { title: title.trim() })
@@ -68,80 +79,55 @@ onMounted(load)
 
 <template>
   <div>
-    <h2>积分项</h2>
-    <p class="err">{{ error }}</p>
+    <PageHeader title="积分项" />
+    <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
 
-    <div class="card add">
-      <div class="add-row">
-        <input v-model="newTitle" placeholder="标题，如：托管课写完作业" />
-        <input v-model.number="newPoints" type="number" placeholder="分值" style="max-width: 120px" />
-        <button :disabled="!newTitle || !newPoints" @click="create">添加</button>
+    <div class="card border border-base-300 bg-base-100 shadow-sm">
+      <div class="card-body gap-3">
+        <h3 class="text-base font-bold">添加积分项</h3>
+        <div class="join w-full max-lg:flex-wrap">
+          <input
+            v-model="newTitle"
+            class="input join-item min-w-36 flex-1 text-base max-lg:input-lg"
+            placeholder="标题，如：托管课写完作业"
+          />
+          <input
+            v-model.number="newPoints"
+            type="number"
+            class="input join-item w-28 text-base max-lg:input-lg"
+            placeholder="分值"
+          />
+          <button
+            class="btn btn-primary join-item max-lg:btn-lg"
+            :disabled="!newTitle || !newPoints"
+            @click="create"
+          >
+            添加
+          </button>
+        </div>
+        <p class="text-xs text-base-content/50">
+          停用的积分项不再出现在登记页与孩子的得分指南里
+        </p>
       </div>
-      <p class="hint">停用的积分项不再出现在登记页与孩子的得分指南里</p>
     </div>
 
-    <div class="list">
-      <div v-for="it in items" :key="it.id" class="card row" :class="{ off: !it.active }">
-        <span class="title">{{ it.title }}</span>
-        <span class="pts">+{{ it.points }} 分</span>
-        <span class="ops">
-          <button class="ghost" @click="rename(it)">改名</button>
-          <button class="ghost" @click="editPoints(it)">改分值</button>
-          <button class="ghost" @click="toggle(it)">{{ it.active ? '停用' : '启用' }}</button>
-        </span>
-      </div>
-      <p v-if="items.length === 0" class="empty">还没有积分项</p>
+    <div class="mt-4 flex flex-col gap-3">
+      <RowCard v-for="it in items" :key="it.id" :class="!it.active ? 'opacity-60' : ''">
+        <p class="flex flex-wrap items-center gap-2">
+          <span class="font-semibold">{{ it.title }}</span>
+          <em class="badge badge-soft not-italic">+{{ it.points }} 分</em>
+        </p>
+        <template #actions>
+          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="rename(it)">改名</button>
+          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="editPoints(it)">
+            改分值
+          </button>
+          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="toggle(it)">
+            {{ it.active ? '停用' : '启用' }}
+          </button>
+        </template>
+      </RowCard>
     </div>
+    <EmptyState v-if="items.length === 0" text="还没有积分项" />
   </div>
 </template>
-
-<style scoped>
-h2 {
-  margin-bottom: 14px;
-}
-.add-row {
-  display: flex;
-  gap: 8px;
-}
-.hint {
-  font-size: 13px;
-  color: var(--c-sub);
-  margin-top: 8px;
-}
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
-.row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.row.off {
-  opacity: 0.6;
-}
-.title {
-  flex: 1;
-  font-size: 15px;
-  font-weight: 600;
-}
-.pts {
-  color: var(--c-primary);
-  font-weight: 800;
-  white-space: nowrap;
-}
-.ops {
-  display: flex;
-  gap: 6px;
-}
-.ops .ghost {
-  padding: 6px 10px;
-  font-size: 13px;
-}
-.empty {
-  color: var(--c-sub);
-  padding: 20px 0;
-}
-</style>
