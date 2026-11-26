@@ -1,18 +1,31 @@
 <script setup lang="ts">
-defineProps<{ balance: number }>()
+// 记分板：橙金渐变 + 全页唯一的主数字（TickNumber 滚动进场）。
+// loaded 为假时用同字号的透明占位撑住高度，避免先闪一下 0。
+import TickNumber from './TickNumber.vue'
+
+defineProps<{ balance: number; loaded: boolean }>()
 </script>
 
 <template>
-  <!-- 记分板：橙金渐变 + 超大等宽数字 -->
-  <div
-    class="card overflow-hidden border-0 bg-linear-to-br from-accent to-primary text-primary-content shadow-lg shadow-primary/30"
+  <section
+    class="relative overflow-hidden rounded-2xl bg-linear-to-br from-accent to-primary text-primary-content shadow-hero"
+    aria-label="我的积分"
   >
-    <div class="card-body gap-1 py-6">
-      <p class="self-start rounded-full bg-black/25 px-2.5 py-0.5 text-sm">我的积分</p>
-      <p class="text-6xl font-extrabold leading-none tabular-nums">{{ balance }}</p>
-      <p class="mt-1 self-start rounded-lg bg-black/25 px-2.5 py-1 text-xs">
+    <div class="px-6 py-6 lg:px-8 lg:py-8">
+      <p class="text-sm font-medium text-primary-content/80">我的积分</p>
+      <p class="mt-2 flex items-baseline gap-2">
+        <TickNumber
+          v-if="loaded"
+          :value="balance"
+          enter
+          class="text-hero lg:text-hero-lg"
+        />
+        <span v-else class="text-hero lg:text-hero-lg opacity-0" aria-hidden="true">0</span>
+        <span class="text-lg font-medium text-primary-content/75">分</span>
+      </p>
+      <p class="mt-3 text-sm leading-relaxed text-primary-content/85">
         完成好事就能加分，攒够了去转盘抽奖
       </p>
     </div>
-  </div>
+  </section>
 </template>
