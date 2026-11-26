@@ -14,7 +14,8 @@ defineProps<{ items: GuideItem[] }>()
       >{{ items.length }} 项</span>
     </summary>
     <div class="collapse-content px-0 pt-0 pb-1">
-      <p v-if="items.length === 0" class="text-sm text-base-content/60">
+      <!-- px 不改变块级元素自身的盒位置（探针/缩进按盒左缘量），与清单行同缩进要用外边距 -->
+      <p v-if="items.length === 0" class="mx-5 text-sm text-base-content/60 lg:mx-6">
         问问爸爸妈妈都设置好了哪些积分项吧
       </p>
       <ul v-else class="stagger divided px-5 lg:px-6">
