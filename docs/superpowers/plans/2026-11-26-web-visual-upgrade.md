@@ -570,9 +570,9 @@ for path, name in [('/parent/children', 'children'), ('/parent/items', 'items'),
 go('/parent/children', 'light')
 check('row action buttons 14px on desktop', js("[...document.querySelectorAll('main .surface button.btn')].length >= 3 && [...document.querySelectorAll('main .surface button.btn')].every(e => getComputedStyle(e).fontSize === '14px')"))
 vp(390, 844, 2, True)
-for path, name in [('/parent/children', 'children'), ('/parent/items', 'items'), ('/parent/prizes', 'prizes')]:
+for path, name, extra in [('/parent/children', 'children', 'main .surface .btn-primary'), ('/parent/items', 'items', 'main .join .btn'), ('/parent/prizes', 'prizes', 'main .join .btn')]:
     go(path, 'light')
-    check(name + ': touch targets', min_touch('main .surface button.btn') > 0 and min_touch('main .join .btn') > 0 and min_touch('main input') > 0)
+    check(name + ': touch targets', min_touch('main .surface button.btn') > 0 and min_touch(extra) > 0 and min_touch('main input') > 0)
     no_horizontal_scroll(360)
 go('/parent/draws', 'light'); shot('t9-draws-m-light'); min_touch('main .surface button.btn-primary')
 logout()
