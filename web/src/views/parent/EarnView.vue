@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, errMsg } from '../../api'
+import { useToast } from '../../composables/useToast'
+import FormField from '../../components/ui/FormField.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
 import type { ChildView, EntryResp, ItemView } from '../../types'
 
 const route = useRoute()
@@ -13,17 +16,25 @@ const activeItems = computed(() => items.value.filter((i) => i.active))
 
 const selected = ref<number | null>(null)
 const note = ref('')
-const toast = ref('')
 const error = ref('')
 
 // 手动调整
 const adjDelta = ref<number | null>(null)
 const adjNote = ref('')
 
+// 双击防抖：toast 显示期间忽略点击（语义与原本地 toast ref 一致）
+const toast = useToast()
+const toastVisible = ref(false)
+let toastTimer = 0
+
 function flash(msg: string) {
-  toast.value = msg
-  setTimeout(() => (toast.value = ''), 2200)
+  toast.show(msg)
+  toastVisible.value = true
+  clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => (toastVisible.value = false), 2200)
 }
+
+onBeforeUnmount(() => clearTimeout(toastTimer))
 
 async function load() {
   children.value = (await api<{ children: ChildView[] }>('GET', '/api/children')).children
@@ -36,7 +47,7 @@ async function load() {
 }
 
 async function earn(item: ItemView) {
-  if (selected.value === null || toast.value) return
+  if (selected.value === null || toastVisible.value) return
   error.value = ''
   try {
     const res = await api<EntryResp>('POST', '/api/earnings', {
@@ -77,137 +88,83 @@ onMounted(load)
 </script>
 
 <template>
-  <div>
-    <h2>登记得分</h2>
+  <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
+    <div class="min-w-0">
+      <PageHeader title="登记得分" />
 
-    <div class="card sel">
-      <label>给谁登记</label>
-      <div class="chips">
+      <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
+
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         <button
-          v-for="c in activeChildren"
-          :key="c.id"
-          class="chip"
-          :class="{ on: selected === c.id }"
-          @click="selected = c.id"
+          v-for="it in activeItems"
+          :key="it.id"
+          class="btn h-auto min-h-24 flex-col justify-center gap-1 border border-base-300 bg-base-100 py-4 shadow-sm max-lg:btn-lg"
+          :disabled="selected === null"
+          @click="earn(it)"
         >
-          {{ c.displayName }} · {{ c.balance }}分
+          <span class="text-lg font-extrabold text-brand-ink tabular-nums">+{{ it.points }} 分</span>
+          <span class="max-w-full truncate text-sm font-normal">{{ it.title }}</span>
         </button>
-        <span v-if="activeChildren.length === 0" class="none">先去「孩子」页添加孩子</span>
       </div>
-      <div class="field" style="margin-top: 12px">
-        <label for="note">备注（可不填）</label>
-        <input id="note" v-model="note" placeholder="今天完成得很好" />
-      </div>
+      <p v-if="activeItems.length === 0" class="py-8 text-center text-sm text-base-content/60">
+        还没有积分项，去「积分项」页添加，或到总览页用一键导入
+      </p>
     </div>
 
-    <p class="err">{{ error }}</p>
-    <transition name="fade">
-      <p v-if="toast" class="ok-note toast">{{ toast }}</p>
-    </transition>
+    <div class="flex flex-col gap-4 max-lg:mt-4">
+      <div class="card border border-base-300 bg-base-100 shadow-sm">
+        <div class="card-body gap-3">
+          <h3 class="text-base font-bold">给谁登记</h3>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="c in activeChildren"
+              :key="c.id"
+              class="btn btn-soft rounded-full btn-sm max-lg:btn-lg"
+              :class="selected === c.id ? 'btn-primary' : ''"
+              @click="selected = c.id"
+            >
+              {{ c.displayName }} · {{ c.balance }}分
+            </button>
+            <span v-if="activeChildren.length === 0" class="text-sm text-base-content/60">
+              先去「孩子」页添加孩子
+            </span>
+          </div>
+          <FormField label="备注（可不填）" for-id="note">
+            <input
+              id="note"
+              v-model="note"
+              class="input w-full text-base max-lg:input-lg"
+              placeholder="今天完成得很好"
+            />
+          </FormField>
+        </div>
+      </div>
 
-    <div class="grid">
-      <button v-for="it in activeItems" :key="it.id" class="item" :disabled="selected === null" @click="earn(it)">
-        <span class="pts">+{{ it.points }} 分</span>
-        <span class="title">{{ it.title }}</span>
-      </button>
-    </div>
-    <p v-if="activeItems.length === 0" class="empty">
-      还没有积分项，去「积分项」页添加，或到总览页用一键导入
-    </p>
-
-    <div class="card adjust">
-      <h3>手动调整</h3>
-      <div class="adj-row">
-        <input
-          v-model.number="adjDelta"
-          type="number"
-          placeholder="±分值（如 -20 或 10）"
-        />
-        <input v-model="adjNote" placeholder="原因（必填）" />
-        <button :disabled="selected === null || !adjDelta || !adjNote" @click="adjust">调整</button>
+      <div class="card border border-base-300 bg-base-100 shadow-sm">
+        <div class="card-body gap-3">
+          <h3 class="text-base font-bold">手动调整</h3>
+          <div class="flex flex-col gap-2">
+            <input
+              v-model.number="adjDelta"
+              type="number"
+              class="input w-full text-base max-lg:input-lg"
+              placeholder="±分值（如 -20 或 10）"
+            />
+            <input
+              v-model="adjNote"
+              class="input w-full text-base max-lg:input-lg"
+              placeholder="原因（必填）"
+            />
+            <button
+              class="btn btn-primary max-lg:btn-lg"
+              :disabled="selected === null || !adjDelta || !adjNote"
+              @click="adjust"
+            >
+              调整
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-h2 {
-  margin-bottom: 14px;
-}
-.sel .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.chip {
-  background: #f4f1ea;
-  color: var(--c-ink);
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-size: 14px;
-}
-.chip.on {
-  background: var(--c-primary);
-  color: #fff;
-  font-weight: 700;
-}
-.none {
-  color: var(--c-sub);
-  font-size: 14px;
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-  margin: 14px 0;
-}
-.item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 10px;
-  background: var(--c-card);
-  color: var(--c-ink);
-  box-shadow: 0 2px 8px rgba(43, 39, 34, 0.06);
-}
-.item:active {
-  transform: scale(0.97);
-}
-.pts {
-  color: var(--c-primary);
-  font-weight: 800;
-  font-size: 17px;
-}
-.title {
-  font-size: 14px;
-}
-.toast {
-  padding: 8px 0;
-}
-.empty {
-  color: var(--c-sub);
-  padding: 20px 0;
-}
-.adjust h3 {
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-.adj-row {
-  display: flex;
-  gap: 8px;
-}
-.adj-row input {
-  flex: 1;
-}
-.adj-row button {
-  white-space: nowrap;
-}
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
