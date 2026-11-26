@@ -449,7 +449,7 @@ new_child('名字特别长的一个孩子', adjust=1234)
 go('/parent/overview', 'light'); wait_for("document.querySelectorAll('article.surface').length >= 3"); shot('t7-overview-m-long')
 hs = js("[...document.querySelectorAll('article.surface')].map(e => Math.round(e.getBoundingClientRect().height))")
 check('long name does not grow the card', len(hs) >= 3 and len(set(hs)) == 1, hs)
-check('long name is truncated', '名字特别长' in texts('article.surface h3')[2] and '…' not in texts('article.surface h3')[2], texts('article.surface h3'))
+check('long name is truncated', '名字特别长' in texts('article.surface h4')[2] and '…' not in texts('article.surface h4')[2], texts('article.surface h4'))
 no_horizontal_scroll(360)
 ```
 
@@ -459,7 +459,7 @@ no_horizontal_scroll(360)
 
 - [ ] **Step 2: 实现**（设计文档 §5.5 总览部分；对照 `.superpowers/mockup-kit/pages/parent-overview.html`）
 
-  新增 `unfulfilledTotal`、`pendingCount`。概况与孩子两节包在 `v-if="info"` 里。三格统计、状态点（大于 0 时 `bg-warning` / `bg-accent`，为 0 时 `bg-base-300`）、孩子卡片、状态胶囊、"登记得分"软按钮按效果图。无孩子时的 `EmptyState` 不变。
+  新增 `unfulfilledTotal`、`pendingCount`。概况与孩子两节包在 `v-if="info"` 里。三格统计、状态点（大于 0 时 `bg-warning` / `bg-accent`，为 0 时 `bg-base-300`）、孩子卡片、状态胶囊、"登记得分"软按钮按效果图。孩子卡片里的名字是 `<h4 class="truncate text-base font-semibold">`（效果图如此；`h3` 是"孩子"分区标题）。无孩子时的 `EmptyState` 不变。
 
 - [ ] **Step 3: 重建、跑出绿、看截图**（`t7-overview-d-light`、`t7-overview-d-dark`、`t7-overview-m-light`、`t7-overview-m-long`，与效果图逐项对照）
 
