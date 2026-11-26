@@ -27,8 +27,12 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
     } catch {
       /* 非 JSON 错误体 */
     }
-    // 会话过期：跳登录页（登录接口自身 401 不跳，交给表单提示）
-    if (res.status === 401 && !path.startsWith('/api/auth/')) {
+    // 会话过期：跳登录页（登录/注册接口自身的 401 交给表单提示）。
+    // 注意：已在 /login、/register 等公开页时绝不能再跳——否则页面上
+    // 路由守卫的 /api/me 探测 401 会把自己重定向到自己，造成整页刷新死循环。
+    const onPublicPage =
+      location.pathname.startsWith('/login') || location.pathname.startsWith('/register')
+    if (res.status === 401 && !path.startsWith('/api/auth/') && !onPublicPage) {
       location.href = '/login'
     }
     throw new ApiError(res.status, code, message)
