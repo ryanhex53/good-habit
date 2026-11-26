@@ -14,67 +14,28 @@ const reason = computed(() => {
   }
   return props.row.note || '手动调整'
 })
+// 静态颜色映射（earn=绿，draw/adjust=品牌橙，与原实现一致）
+const deltaClass: Record<string, string> = {
+  earn: 'text-success',
+  draw: 'text-primary',
+  adjust: 'text-primary',
+}
 </script>
 
 <template>
-  <div class="row" :class="row.kind">
-    <span class="icon">{{ icon }}</span>
-    <div class="mid">
-      <p class="reason">{{ reason }}</p>
-      <p class="time">{{ fmtTime(row.createdAt) }}</p>
-    </div>
-    <div class="right">
-      <p class="delta">{{ row.delta > 0 ? '+' : '' }}{{ row.delta }}</p>
-      <p class="after">当时 {{ row.balanceAfter }}</p>
+  <div class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body flex-row items-center gap-3 py-3.5">
+      <span class="shrink-0 text-xl">{{ icon }}</span>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-semibold">{{ reason }}</p>
+        <p class="text-xs text-base-content/60">{{ fmtTime(row.createdAt) }}</p>
+      </div>
+      <div class="shrink-0 text-right">
+        <p class="text-lg font-extrabold tabular-nums" :class="deltaClass[row.kind]">
+          {{ row.delta > 0 ? '+' : '' }}{{ row.delta }}
+        </p>
+        <p class="text-xs text-base-content/60">当时 {{ row.balanceAfter }}</p>
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--c-card);
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-.icon {
-  font-size: 22px;
-}
-.mid {
-  flex: 1;
-  min-width: 0;
-}
-.reason {
-  font-size: 15px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.time {
-  font-size: 12px;
-  color: var(--c-sub);
-  margin-top: 2px;
-}
-.right {
-  text-align: right;
-}
-.delta {
-  font-weight: 800;
-  font-size: 17px;
-}
-.earn .delta {
-  color: var(--c-ok);
-}
-.draw .delta,
-.adjust .delta {
-  color: var(--c-primary);
-}
-.after {
-  font-size: 12px;
-  color: var(--c-sub);
-  margin-top: 2px;
-}
-</style>

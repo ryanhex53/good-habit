@@ -56,6 +56,8 @@ function draw() {
     ctx.save()
     ctx.translate(cx, cy)
     ctx.rotate(mid)
+    // 修复（W 项）：扇区填充后 fillStyle 未重置，奖品名称此前用扇区同色绘制而不可见
+    ctx.fillStyle = '#2b2722'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.font = `${Math.round(s / 14)}px serif`
@@ -181,22 +183,14 @@ watch(
 </script>
 
 <template>
-  <div class="wheel-wrap">
+  <!-- canvas 必须保留 wheel-canvas 类：脚本用 document.querySelector 定位画布 -->
+  <div class="relative flex justify-center">
     <canvas class="wheel-canvas"></canvas>
-    <p v-if="prizes.length === 0" class="empty">转盘还没有奖品</p>
+    <p
+      v-if="prizes.length === 0"
+      class="absolute top-[45%] left-1/2 -translate-x-1/2 text-sm whitespace-nowrap text-base-content/60"
+    >
+      转盘还没有奖品
+    </p>
   </div>
 </template>
-
-<style scoped>
-.wheel-wrap {
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-.empty {
-  position: absolute;
-  top: 45%;
-  color: var(--c-sub);
-  font-size: 14px;
-}
-</style>

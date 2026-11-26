@@ -22,18 +22,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="home">
+  <div class="flex flex-col gap-4 pt-2">
     <PendingBanner v-if="pending" :pending="pending" />
     <BalanceCard :balance="balance" />
     <GuideList :items="items" />
   </div>
 </template>
-
-<style scoped>
-.home {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 8px;
-}
-</style>

@@ -122,24 +122,42 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="wheel-page">
-    <div class="balance-line">当前积分 <b>{{ balance }}</b></div>
+  <div class="pt-2">
+    <p class="text-center text-base-content/60">
+      当前积分
+      <b class="text-primary text-2xl font-bold tabular-nums">{{ balance }}</b>
+    </p>
     <WheelCanvas ref="wheelRef" :prizes="prizes" />
-    <p v-if="toast" class="err toast">{{ toast }}</p>
+    <div v-if="toast" class="alert alert-error py-2 text-sm" role="alert">{{ toast }}</div>
 
-    <div class="actions">
-      <button class="act single" :disabled="!canSingle" @click="draw('single')">
-        抽一次<br /><small>{{ singleCost }} 分</small>
+    <div class="mt-4 flex gap-3 max-lg:flex-col">
+      <button
+        class="btn btn-primary h-auto min-h-16 flex-1 flex-col items-center justify-center gap-0.5 py-3 text-base leading-snug max-lg:btn-lg"
+        :disabled="!canSingle"
+        @click="draw('single')"
+      >
+        <span>抽一次</span>
+        <small class="text-xs opacity-80">{{ singleCost }} 分</small>
       </button>
-      <button class="act double" :disabled="!canDouble" @click="draw('double')">
-        保险抽两次<br /><small>{{ doubleCost }} 分 · 挑喜欢的</small>
+      <button
+        class="btn btn-secondary h-auto min-h-16 flex-1 flex-col items-center justify-center gap-0.5 py-3 text-base leading-snug max-lg:btn-lg"
+        :disabled="!canDouble"
+        @click="draw('double')"
+      >
+        <span>保险抽两次</span>
+        <small class="text-xs opacity-80">{{ doubleCost }} 分 · 挑喜欢的</small>
       </button>
     </div>
 
     <!-- 双抽第一轮结果 -->
-    <div v-if="phase === 'first'" class="card first-card">
-      <p>第一抽：{{ firstPrize?.emoji }} {{ firstPrize?.name }}</p>
-      <button @click="spinSecond">再转一次 ⟳</button>
+    <div
+      v-if="phase === 'first'"
+      class="card mt-4 animate-pop border border-warning bg-warning/10 shadow-sm"
+    >
+      <div class="card-body flex-row flex-wrap items-center justify-between gap-3 py-4">
+        <p class="font-semibold">第一抽：{{ firstPrize?.emoji }} {{ firstPrize?.name }}</p>
+        <button class="btn btn-ghost max-lg:btn-lg" @click="spinSecond">再转一次 ⟳</button>
+      </div>
     </div>
 
     <ChoiceModal v-if="phase === 'choose'" :choices="choices" @pick="pick" />
@@ -151,64 +169,3 @@ onMounted(async () => {
     />
   </div>
 </template>
-
-<style scoped>
-.wheel-page {
-  padding-top: 8px;
-}
-.balance-line {
-  text-align: center;
-  font-size: 16px;
-  margin-bottom: 10px;
-  color: var(--c-sub);
-}
-.balance-line b {
-  color: var(--c-primary);
-  font-size: 22px;
-}
-.actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 18px;
-}
-.act {
-  flex: 1;
-  padding: 14px 8px;
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-.act small {
-  font-size: 12px;
-  font-weight: 400;
-  opacity: 0.9;
-}
-.act.single {
-  background: linear-gradient(135deg, #ff9a3c, #e8630a);
-}
-.act.double {
-  background: linear-gradient(135deg, #8f5cf7, #6a3de8);
-}
-.toast {
-  text-align: center;
-  margin-top: 10px;
-}
-.first-card {
-  margin-top: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  animation: pop 0.25s;
-}
-.first-card p {
-  font-size: 15px;
-  font-weight: 600;
-}
-@keyframes pop {
-  from {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-}
-</style>
