@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 内联 SVG 图标集：Lucide 风格 24×24 描边图标，路径手写精简版（无第三方依赖）。
+// 内联 SVG 图标集：路径取自 Lucide（ISC License，https://lucide.dev）、
+// Feather（MIT）与 Tabler Icons（MIT），按本项目的线条粗细做了统一裁剪，无第三方运行时依赖。
 // 调用方必须传 class 指定尺寸，如 class="size-5"。
 const paths: Record<string, string[]> = {
   home: ['M3 11l9-9 9 9', 'M5 13v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7', 'M12 22v-6'],
@@ -36,13 +37,6 @@ const paths: Record<string, string[]> = {
   ],
   check: ['M20 6L9 17l-5-5'],
   plus: ['M12 5v14', 'M5 12h14'],
-  pencil: ['M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'],
-  key: [
-    'M12 15.5a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0z',
-    'M11.5 11.5L21 2',
-    'M17 6l3 3',
-    'M14 9l2 2',
-  ],
   sun: [
     'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     'M12 2v2',
@@ -56,8 +50,6 @@ const paths: Record<string, string[]> = {
   ],
   moon: ['M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z'],
   'log-out': ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
-  'chevron-down': ['M6 9l6 6 6-6'],
-  'rotate-cw': ['M21 12a9 9 0 1 1-3-6.7', 'M21 3v5h-5'],
   star: ['M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z'],
 }
 

@@ -14,11 +14,11 @@ const reason = computed(() => {
   }
   return props.row.note || '手动调整'
 })
-// 静态颜色映射（earn=绿，draw/adjust=品牌橙，与原实现一致）
+// 静态颜色映射（earn=绿，draw/adjust=品牌橙，与原实现一致；小字用 brand-ink 保证对比度）
 const deltaClass: Record<string, string> = {
   earn: 'text-success',
-  draw: 'text-primary',
-  adjust: 'text-primary',
+  draw: 'text-brand-ink',
+  adjust: 'text-brand-ink',
 }
 </script>
 

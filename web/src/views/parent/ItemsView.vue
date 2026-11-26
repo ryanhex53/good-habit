@@ -85,16 +85,17 @@ onMounted(load)
     <div class="card border border-base-300 bg-base-100 shadow-sm">
       <div class="card-body gap-3">
         <h3 class="text-base font-bold">添加积分项</h3>
-        <div class="join w-full max-lg:flex-wrap">
+        <!-- 手机上竖向堆叠（join-vertical），lg 起横向拼接 -->
+        <div class="join w-full max-lg:join-vertical">
           <input
             v-model="newTitle"
-            class="input join-item min-w-36 flex-1 text-base max-lg:input-lg"
+            class="input join-item w-full text-base max-lg:input-lg lg:w-auto lg:min-w-36 lg:flex-1"
             placeholder="标题，如：托管课写完作业"
           />
           <input
             v-model.number="newPoints"
             type="number"
-            class="input join-item w-28 text-base max-lg:input-lg"
+            class="input join-item w-full text-base max-lg:input-lg lg:w-28"
             placeholder="分值"
           />
           <button
@@ -118,11 +119,11 @@ onMounted(load)
           <em class="badge badge-soft not-italic">+{{ it.points }} 分</em>
         </p>
         <template #actions>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="rename(it)">改名</button>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="editPoints(it)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="rename(it)">改名</button>
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="editPoints(it)">
             改分值
           </button>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="toggle(it)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="toggle(it)">
             {{ it.active ? '停用' : '启用' }}
           </button>
         </template>

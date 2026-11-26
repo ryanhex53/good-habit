@@ -14,6 +14,10 @@ const links = [
   { to: '/kid/bills', label: '账单', icon: 'receipt' },
 ]
 
+function isActive(to: string): boolean {
+  return route.path === to
+}
+
 async function doLogout() {
   await logout()
   router.push('/login')
@@ -22,14 +26,14 @@ async function doLogout() {
 
 <template>
   <div class="min-h-dvh bg-base-200">
-    <!-- 顶栏：昵称 + 主题切换 + 登出 -->
+    <!-- 顶栏：昵称 + 主题切换 + 登出（触控目标 ≥44px） -->
     <header class="navbar min-h-14 bg-base-100 px-3 pt-[env(safe-area-inset-top)]">
       <div class="flex-1 truncate font-bold">{{ me?.displayName }}</div>
       <div class="flex items-center gap-1">
         <ThemeToggle />
         <button
           type="button"
-          class="btn btn-ghost btn-sm max-lg:btn-circle"
+          class="btn btn-ghost max-lg:btn-circle min-h-11 min-w-11 gap-2"
           aria-label="退出登录"
           @click="doLogout"
         >
@@ -47,7 +51,8 @@ async function doLogout() {
           :key="l.to"
           :to="l.to"
           class="tab min-h-11 gap-2"
-          :class="route.path === l.to ? 'tab-active' : ''"
+          :class="isActive(l.to) ? 'tab-active text-brand-ink' : ''"
+          :aria-current="isActive(l.to) ? 'page' : undefined"
         >
           <BaseIcon :name="l.icon" class="size-4" />
           {{ l.label }}
@@ -70,7 +75,8 @@ async function doLogout() {
         :key="l.to"
         :to="l.to"
         class="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5"
-        :class="route.path === l.to ? 'text-primary font-semibold' : 'text-base-content/60'"
+        :class="isActive(l.to) ? 'font-semibold text-brand-ink' : 'text-base-content/60'"
+        :aria-current="isActive(l.to) ? 'page' : undefined"
       >
         <BaseIcon :name="l.icon" class="size-5" />
         <span class="text-xs">{{ l.label }}</span>

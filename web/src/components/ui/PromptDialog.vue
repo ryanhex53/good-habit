@@ -31,10 +31,15 @@ function submit(): void {
 </script>
 
 <template>
-  <BaseDialog v-if="state.prompt" :dismissible="true" @close="resolvePrompt(null)">
+  <BaseDialog
+    v-if="state.prompt"
+    :label="state.prompt.title"
+    :dismissible="true"
+    @close="resolvePrompt(null)"
+  >
     <form class="flex flex-col gap-3" @submit.prevent="submit">
       <h3 class="text-lg font-bold">{{ state.prompt.title }}</h3>
-      <label v-if="state.prompt.label" class="text-sm text-base-content/70" :for="'prompt-input'">
+      <label v-if="state.prompt.label" class="text-sm text-base-content/70" for="prompt-input">
         {{ state.prompt.label }}
       </label>
       <input

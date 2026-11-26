@@ -50,6 +50,8 @@
   --border: 1px;
   --depth: 0;
   --noise: 0;
+  /* 浏览器根底色：与页面底色一致（回弹/过滚动区域不露白） */
+  --root-bg: var(--color-base-200);
 }
 
 /* 深色主题（同名覆盖：暗环境下令牌整体提亮，content 换深墨色） */
@@ -88,10 +90,10 @@
   --border: 1px;
   --depth: 0;
   --noise: 0;
+  --root-bg: var(--color-base-200);
 }
 
-/* 用 data-theme 驱动 Tailwind 的 dark: 变体 */
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+/* 用 data-theme 驱动主题令牌；所有配色走 daisyUI 语义色，不使用 dark: 变体 */
 
 @theme {
   --font-sans: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
@@ -112,9 +114,11 @@
   --color-brand-ink: #ffb27d;
 }
 
-@layer base {
-  html {
-    background-color: var(--color-base-200);
+@layer components {
+  /* 实心橙底白字对比度仅 3.4:1：默认尺寸按钮统一 16px 半粗（见设计语言）。
+     daisyUI 自身已是 600 字重；尺寸变体（btn-sm/lg…）与文字工具类仍可覆盖。 */
+  .btn {
+    --fontsize: 1rem;
   }
 }
 

@@ -143,15 +143,16 @@ onMounted(load)
     <div class="card mt-4 border border-base-300 bg-base-100 shadow-sm">
       <div class="card-body gap-3">
         <h3 class="text-base font-bold">添加奖品</h3>
-        <div class="join w-full max-lg:flex-wrap">
+        <!-- 手机上竖向堆叠（join-vertical），lg 起横向拼接 -->
+        <div class="join w-full max-lg:join-vertical">
           <input
             v-model="newEmoji"
-            class="input join-item w-24 text-base max-lg:input-lg"
+            class="input join-item w-full text-base max-lg:input-lg lg:w-24"
             placeholder="emoji 🎁"
           />
           <input
             v-model="newName"
-            class="input join-item min-w-36 flex-1 text-base max-lg:input-lg"
+            class="input join-item w-full text-base max-lg:input-lg lg:w-auto lg:min-w-36 lg:flex-1"
             placeholder="奖品名，如：水果糖1颗"
           />
           <button
@@ -172,11 +173,11 @@ onMounted(load)
           <span class="font-semibold">{{ pz.name }}</span>
         </p>
         <template #actions>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="rename(pz)">改名</button>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="changeEmoji(pz)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="rename(pz)">改名</button>
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="changeEmoji(pz)">
             改 emoji
           </button>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="toggle(pz)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="toggle(pz)">
             {{ pz.active ? '停用' : '启用' }}
           </button>
         </template>

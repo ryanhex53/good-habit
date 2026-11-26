@@ -24,8 +24,8 @@ async function submit() {
     await refresh()
     // 修复（用户实测报告）：push('/') 会经 '/'→'/login' 重定向回到当前路由，
     // 被 vue-router 判定为重复导航而静默中止，导致登录后停在登录页。
-    // 直接跳角色首页。
-    router.push(me.value ? homeOf(me.value.role) : '/')
+    // 直接跳角色首页；极端情况下会话仍为空则留在登录页由表单提示。
+    router.push(me.value ? homeOf(me.value.role) : '/login')
   } catch (e) {
     error.value = errMsg(e)
   } finally {
@@ -82,7 +82,7 @@ async function submit() {
         </form>
 
         <p class="text-center text-sm text-base-content/60">
-          还没有账号？<RouterLink to="/register" class="link link-primary">注册一个</RouterLink>
+          还没有账号？<RouterLink to="/register" class="link text-brand-ink">注册一个</RouterLink>
         </p>
       </div>
     </div>

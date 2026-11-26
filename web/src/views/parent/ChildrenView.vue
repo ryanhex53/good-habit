@@ -95,25 +95,26 @@ onMounted(load)
     <div class="card border border-base-300 bg-base-100 shadow-sm">
       <div class="card-body gap-3">
         <h3 class="text-base font-bold">添加孩子</h3>
-        <div class="flex flex-wrap gap-2">
+        <!-- 手机上每个字段独占一行、按钮整行；lg 起同一行 -->
+        <div class="flex flex-col gap-2 lg:flex-row lg:flex-wrap">
           <input
             v-model="newDisp"
-            class="input min-w-36 flex-1 text-base max-lg:input-lg"
+            class="input w-full text-base max-lg:input-lg lg:w-auto lg:min-w-36 lg:flex-1"
             placeholder="昵称（必填）"
           />
           <input
             v-model="newName"
-            class="input min-w-36 flex-1 text-base max-lg:input-lg"
+            class="input w-full text-base max-lg:input-lg lg:w-auto lg:min-w-36 lg:flex-1"
             placeholder="登录用户名"
           />
           <input
             v-model="newPw"
             type="password"
-            class="input min-w-36 flex-1 text-base max-lg:input-lg"
+            class="input w-full text-base max-lg:input-lg lg:w-auto lg:min-w-36 lg:flex-1"
             placeholder="初始密码（≥8 位）"
           />
           <button
-            class="btn btn-primary max-lg:btn-lg"
+            class="btn btn-primary max-lg:w-full max-lg:btn-lg"
             :disabled="!newDisp || !newName || !newPw"
             @click="create"
           >
@@ -134,11 +135,11 @@ onMounted(load)
         </p>
         <p class="text-xs text-base-content/60">{{ c.username }} · {{ c.balance }} 分</p>
         <template #actions>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="rename(c)">改名</button>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="resetPw(c)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="rename(c)">改名</button>
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="resetPw(c)">
             重置密码
           </button>
-          <button class="btn btn-ghost btn-sm max-lg:min-h-11" @click="toggleActive(c)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="toggleActive(c)">
             {{ c.active ? '停用' : '恢复' }}
           </button>
         </template>

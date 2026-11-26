@@ -55,13 +55,13 @@ onMounted(load)
       <RowCard v-for="d in draws" :key="d.uuid">
         <p class="text-sm">
           {{ d.childName }} 抽中
-          <b class="text-primary">{{ d.prizeName }}</b>
+          <b class="text-brand-ink">{{ d.prizeName }}</b>
         </p>
         <p class="mt-0.5 text-xs text-base-content/60">
           {{ d.mode === 'double' ? '保险抽' : '单抽' }} · {{ d.cost }} 分 · {{ fmtTime(d.createdAt) }}
         </p>
         <template #actions>
-          <button class="btn btn-primary btn-sm max-lg:min-h-11" @click="fulfill(d)">
+          <button class="btn btn-primary max-lg:w-full" @click="fulfill(d)">
             标记已发放
           </button>
         </template>

@@ -18,6 +18,10 @@ const links = [
   { to: '/parent/bills', label: '账单', icon: 'receipt' },
 ]
 
+function isActive(to: string): boolean {
+  return route.path === to
+}
+
 async function doLogout() {
   await logout()
   router.push('/login')
@@ -37,7 +41,7 @@ async function doLogout() {
       <ThemeToggle />
       <button
         type="button"
-        class="btn btn-ghost btn-circle"
+        class="btn btn-ghost btn-circle min-h-11 min-w-11"
         aria-label="退出登录"
         @click="doLogout"
       >
@@ -45,15 +49,18 @@ async function doLogout() {
       </button>
     </header>
 
-    <!-- 手机页签条（横向可滚） -->
-    <nav class="border-b border-base-300 bg-base-100 px-2 py-2 lg:hidden">
-      <div class="tabs tabs-box min-w-max overflow-x-auto">
+    <!-- 手机页签条：<nav> 自身是横向滚动容器，页签组只占内容宽度（不撑破页面） -->
+    <nav
+      class="overflow-x-auto border-b border-base-300 bg-base-100 px-2 py-2 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+    >
+      <div class="tabs tabs-box w-max min-w-full">
         <RouterLink
           v-for="l in links"
           :key="l.to"
           :to="l.to"
           class="tab min-h-11 whitespace-nowrap"
-          :class="route.path === l.to ? 'tab-active' : ''"
+          :class="isActive(l.to) ? 'tab-active text-brand-ink' : ''"
+          :aria-current="isActive(l.to) ? 'page' : undefined"
         >
           {{ l.label }}
         </RouterLink>
@@ -68,7 +75,12 @@ async function doLogout() {
       </div>
       <ul class="menu w-full flex-1 gap-1 p-0">
         <li v-for="l in links" :key="l.to">
-          <RouterLink :to="l.to" class="min-h-11" :class="route.path === l.to ? 'menu-active' : ''">
+          <RouterLink
+            :to="l.to"
+            class="min-h-11"
+            :class="isActive(l.to) ? 'menu-active bg-primary/10 font-bold text-brand-ink' : ''"
+            :aria-current="isActive(l.to) ? 'page' : undefined"
+          >
             <BaseIcon :name="l.icon" class="size-5" />
             {{ l.label }}
           </RouterLink>

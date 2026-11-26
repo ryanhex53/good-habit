@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import router from '../router'
 
 export interface PromptOptions {
   title: string
@@ -35,6 +36,25 @@ const state = reactive<DialogState>({
   confirmResolve: null,
 })
 
+function resolvePrompt(value: string | null): void {
+  state.promptResolve?.(value)
+  state.prompt = null
+  state.promptResolve = null
+}
+
+function resolveConfirm(value: boolean): void {
+  state.confirmResolve?.(value)
+  state.confirm = null
+  state.confirmResolve = null
+}
+
+// 路由切换即取消未决对话框：原生 prompt/confirm 是模态的，用户不可能带着弹窗
+// 离开页面；这里保证「应用内返回」后弹窗不会残留在上一个页面、确认后照发请求。
+router.afterEach(() => {
+  resolvePrompt(null)
+  resolveConfirm(false)
+})
+
 export function useDialogs(): {
   state: DialogState
   prompt: (opts: PromptOptions) => Promise<string | null>
@@ -44,8 +64,8 @@ export function useDialogs(): {
 } {
   function prompt(opts: PromptOptions): Promise<string | null> {
     return new Promise((resolve) => {
-      state.promptResolve?.(null)
-      state.confirmResolve?.(false)
+      resolvePrompt(null)
+      resolveConfirm(false)
       state.prompt = opts
       state.promptResolve = resolve
     })
@@ -53,23 +73,11 @@ export function useDialogs(): {
 
   function confirm(opts: ConfirmOptions): Promise<boolean> {
     return new Promise((resolve) => {
-      state.promptResolve?.(null)
-      state.confirmResolve?.(false)
+      resolvePrompt(null)
+      resolveConfirm(false)
       state.confirm = opts
       state.confirmResolve = resolve
     })
-  }
-
-  function resolvePrompt(value: string | null): void {
-    state.promptResolve?.(value)
-    state.prompt = null
-    state.promptResolve = null
-  }
-
-  function resolveConfirm(value: boolean): void {
-    state.confirmResolve?.(value)
-    state.confirm = null
-    state.confirmResolve = null
   }
 
   return { state, prompt, confirm, resolvePrompt, resolveConfirm }

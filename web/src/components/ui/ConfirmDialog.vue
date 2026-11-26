@@ -8,7 +8,12 @@ const { state, resolveConfirm } = useDialogs()
 </script>
 
 <template>
-  <BaseDialog v-if="state.confirm" :dismissible="true" @close="resolveConfirm(false)">
+  <BaseDialog
+    v-if="state.confirm"
+    :label="state.confirm.title"
+    :dismissible="true"
+    @close="resolveConfirm(false)"
+  >
     <div class="flex flex-col gap-3">
       <h3 class="text-lg font-bold">{{ state.confirm.title }}</h3>
       <p class="text-sm text-base-content/70">{{ state.confirm.message }}</p>

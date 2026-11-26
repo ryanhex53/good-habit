@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import router from '../router'
 
 export interface ToastState {
@@ -8,7 +8,6 @@ export interface ToastState {
 
 // 模块级单例：整个应用同一时刻只有一条 toast（与原各页面的单字符串 ref 等价）。
 const current = ref<ToastState | null>(null)
-const active = computed(() => current.value !== null)
 
 let timer = 0
 let seq = 0
@@ -32,9 +31,8 @@ router.afterEach(() => dismiss())
 
 export function useToast(): {
   current: Ref<ToastState | null>
-  active: ComputedRef<boolean>
   show: (message: string, duration?: number) => void
   dismiss: () => void
 } {
-  return { current, active, show, dismiss }
+  return { current, show, dismiss }
 }

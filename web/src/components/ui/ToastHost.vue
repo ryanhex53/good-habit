@@ -11,10 +11,11 @@ const lifted = computed(() => route.path.startsWith('/kid'))
 </script>
 
 <template>
+  <!-- pointer-events-none：提示不参与点击，不遮挡下方控件 -->
   <Transition name="toast-fade">
     <div
       v-if="current"
-      class="toast toast-center toast-bottom z-50"
+      class="toast toast-center toast-bottom pointer-events-none z-50"
       :class="lifted ? 'mb-24 lg:mb-8' : 'mb-8'"
       role="status"
       aria-live="polite"

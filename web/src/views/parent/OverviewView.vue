@@ -45,7 +45,7 @@ onMounted(async () => {
             <b class="text-3xl font-extrabold tabular-nums text-base-content">{{ c.balance }}</b>
             分
           </p>
-          <RouterLink class="link link-primary text-sm" :to="`/parent/earn?child=${c.id}`">
+          <RouterLink class="link text-brand-ink text-sm" :to="`/parent/earn?child=${c.id}`">
             去登记得分 ›
           </RouterLink>
         </div>

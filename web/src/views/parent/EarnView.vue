@@ -88,83 +88,93 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
-    <div class="min-w-0">
-      <PageHeader title="登记得分" />
+  <!--
+    手机（DOM 顺序）：给谁登记 → 积分项 → 手动调整（与原版一致）。
+    lg 起两栏：网格在左、选人在右上、手动调整在右下。
+  -->
+  <div>
+    <PageHeader title="登记得分" />
+    <div v-if="error" class="alert alert-error mb-4 py-2 text-sm" role="alert">{{ error }}</div>
 
-      <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
+    <div class="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
+      <section class="lg:col-start-2 lg:row-start-1">
+        <div class="card border border-base-300 bg-base-100 shadow-sm">
+          <div class="card-body gap-3">
+            <h3 class="text-base font-bold">给谁登记</h3>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="c in activeChildren"
+                :key="c.id"
+                class="btn rounded-full max-lg:btn-lg"
+                :class="selected === c.id ? 'btn-primary' : 'btn-soft'"
+                :aria-pressed="selected === c.id"
+                @click="selected = c.id"
+              >
+                {{ c.displayName }} · {{ c.balance }}分
+              </button>
+              <span v-if="activeChildren.length === 0" class="text-sm text-base-content/60">
+                先去「孩子」页添加孩子
+              </span>
+            </div>
+            <FormField label="备注（可不填）" for-id="note">
+              <input
+                id="note"
+                v-model="note"
+                class="input w-full text-base max-lg:input-lg"
+                placeholder="今天完成得很好"
+              />
+            </FormField>
+          </div>
+        </div>
+      </section>
 
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        <button
-          v-for="it in activeItems"
-          :key="it.id"
-          class="btn h-auto min-h-24 flex-col justify-center gap-1 border border-base-300 bg-base-100 py-4 shadow-sm max-lg:btn-lg"
-          :disabled="selected === null"
-          @click="earn(it)"
-        >
-          <span class="text-lg font-extrabold text-brand-ink tabular-nums">+{{ it.points }} 分</span>
-          <span class="max-w-full truncate text-sm font-normal">{{ it.title }}</span>
-        </button>
-      </div>
-      <p v-if="activeItems.length === 0" class="py-8 text-center text-sm text-base-content/60">
-        还没有积分项，去「积分项」页添加，或到总览页用一键导入
-      </p>
-    </div>
-
-    <div class="flex flex-col gap-4 max-lg:mt-4">
-      <div class="card border border-base-300 bg-base-100 shadow-sm">
-        <div class="card-body gap-3">
-          <h3 class="text-base font-bold">给谁登记</h3>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="c in activeChildren"
-              :key="c.id"
-              class="btn btn-soft rounded-full btn-sm max-lg:btn-lg"
-              :class="selected === c.id ? 'btn-primary' : ''"
-              @click="selected = c.id"
-            >
-              {{ c.displayName }} · {{ c.balance }}分
-            </button>
-            <span v-if="activeChildren.length === 0" class="text-sm text-base-content/60">
-              先去「孩子」页添加孩子
+      <section class="min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <button
+            v-for="it in activeItems"
+            :key="it.id"
+            class="btn h-auto min-h-24 flex-col justify-center gap-1 border border-base-300 bg-base-100 py-4 shadow-sm max-lg:btn-lg"
+            :disabled="selected === null"
+            @click="earn(it)"
+          >
+            <span class="text-lg font-extrabold text-brand-ink tabular-nums">
+              +{{ it.points }} 分
             </span>
-          </div>
-          <FormField label="备注（可不填）" for-id="note">
-            <input
-              id="note"
-              v-model="note"
-              class="input w-full text-base max-lg:input-lg"
-              placeholder="今天完成得很好"
-            />
-          </FormField>
+            <span class="max-w-full truncate text-sm font-normal">{{ it.title }}</span>
+          </button>
         </div>
-      </div>
+        <p v-if="activeItems.length === 0" class="py-8 text-center text-sm text-base-content/60">
+          还没有积分项，先去「积分项」页添加
+        </p>
+      </section>
 
-      <div class="card border border-base-300 bg-base-100 shadow-sm">
-        <div class="card-body gap-3">
-          <h3 class="text-base font-bold">手动调整</h3>
-          <div class="flex flex-col gap-2">
-            <input
-              v-model.number="adjDelta"
-              type="number"
-              class="input w-full text-base max-lg:input-lg"
-              placeholder="±分值（如 -20 或 10）"
-            />
-            <input
-              v-model="adjNote"
-              class="input w-full text-base max-lg:input-lg"
-              placeholder="原因（必填）"
-            />
-            <button
-              class="btn btn-primary max-lg:btn-lg"
-              :disabled="selected === null || !adjDelta || !adjNote"
-              @click="adjust"
-            >
-              调整
-            </button>
+      <section class="lg:col-start-2 lg:row-start-2">
+        <div class="card border border-base-300 bg-base-100 shadow-sm">
+          <div class="card-body gap-3">
+            <h3 class="text-base font-bold">手动调整</h3>
+            <div class="flex flex-col gap-2">
+              <input
+                v-model.number="adjDelta"
+                type="number"
+                class="input w-full text-base max-lg:input-lg"
+                placeholder="±分值（如 -20 或 10）"
+              />
+              <input
+                v-model="adjNote"
+                class="input w-full text-base max-lg:input-lg"
+                placeholder="原因（必填）"
+              />
+              <button
+                class="btn btn-primary max-lg:btn-lg"
+                :disabled="selected === null || !adjDelta || !adjNote"
+                @click="adjust"
+              >
+                调整
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 </template>

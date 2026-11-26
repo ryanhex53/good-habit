@@ -8,7 +8,7 @@ const { theme, toggle } = useTheme()
 <template>
   <button
     type="button"
-    class="btn btn-ghost btn-circle"
+    class="btn btn-ghost btn-circle min-h-11 min-w-11"
     :aria-label="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
     @click="toggle"
   >

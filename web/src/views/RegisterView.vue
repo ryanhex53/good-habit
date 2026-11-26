@@ -28,7 +28,7 @@ async function submit() {
     })
     await refresh()
     // 同 LoginView：push('/') 经重定向回到当前路由会被静默中止，直接跳角色首页
-    router.push(me.value ? homeOf(me.value.role) : '/')
+    router.push(me.value ? homeOf(me.value.role) : '/login')
   } catch (e) {
     error.value = errMsg(e)
   } finally {
@@ -91,7 +91,7 @@ async function submit() {
         </form>
 
         <p class="text-center text-sm text-base-content/60">
-          已有账号？<RouterLink to="/login" class="link link-primary">去登录</RouterLink>
+          已有账号？<RouterLink to="/login" class="link text-brand-ink">去登录</RouterLink>
         </p>
       </div>
     </div>

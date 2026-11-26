@@ -128,7 +128,10 @@ onMounted(async () => {
       <b class="text-primary text-2xl font-bold tabular-nums">{{ balance }}</b>
     </p>
     <WheelCanvas ref="wheelRef" :prizes="prizes" />
-    <div v-if="toast" class="alert alert-error py-2 text-sm" role="alert">{{ toast }}</div>
+    <!-- 选择弹窗打开时，提示改渲染在弹窗内（弹窗处于顶层，行内提示会被遮住） -->
+    <div v-if="toast && phase !== 'choose'" class="alert alert-error py-2 text-sm" role="alert">
+      {{ toast }}
+    </div>
 
     <div class="mt-4 flex gap-3 max-lg:flex-col">
       <button
@@ -160,7 +163,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <ChoiceModal v-if="phase === 'choose'" :choices="choices" @pick="pick" />
+    <ChoiceModal v-if="phase === 'choose'" :choices="choices" :error="toast" @pick="pick" />
     <ResultModal
       v-if="phase === 'result' && resultPrize"
       :prize="resultPrize"
