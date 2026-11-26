@@ -12,7 +12,7 @@ const emit = defineEmits<{ (e: 'pick', index: number): void }>()
   <BaseDialog :dismissible="false" label="选择奖品">
     <div class="flex flex-col gap-4">
       <div class="text-center">
-        <h3 class="text-xl font-extrabold">挑一个你最喜欢的 🎁</h3>
+        <h3 class="text-xl font-bold">挑一个你最喜欢的 🎁</h3>
         <p class="mt-1 text-sm text-base-content/60">保险抽抽了两次，选中的就是你的！</p>
       </div>
       <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, errMsg } from '../../api'
+import TickNumber from '../../components/TickNumber.vue'
 import WheelCanvas from '../../components/WheelCanvas.vue'
 import ResultModal from '../../components/ResultModal.vue'
 import ChoiceModal from '../../components/ChoiceModal.vue'
@@ -14,6 +15,29 @@ const prizes = ref<Prize[]>([])
 const singleCost = ref(5)
 const doubleCost = ref(7)
 const balance = ref(0)
+const loaded = ref(false)
+
+// 扣分浮动标签：−N，750ms 后消失
+const floatText = ref('')
+let floatTimer: ReturnType<typeof setTimeout> | undefined
+
+const prefersReduced = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+// 抽奖扣分的浮动标签：接口返回处飘出 −N，750ms 后清空；减少动态效果时直接不显示
+function showFloat(cost: number) {
+  if (prefersReduced()) return
+  floatText.value = '−' + cost // − 是 U+2212 减号，不是连字符
+  if (floatTimer !== undefined) clearTimeout(floatTimer)
+  floatTimer = setTimeout(() => {
+    floatText.value = ''
+    floatTimer = undefined
+  }, 750)
+}
+
+onBeforeUnmount(() => {
+  if (floatTimer !== undefined) clearTimeout(floatTimer)
+})
 
 type Phase = 'idle' | 'spin' | 'first' | 'spin2' | 'choose' | 'result'
 const phase = ref<Phase>('idle')
@@ -36,6 +60,7 @@ async function load() {
   singleCost.value = w.singleCost
   doubleCost.value = w.doubleCost
   balance.value = w.balance
+  loaded.value = true
   return w
 }
 
@@ -49,7 +74,9 @@ async function draw(mode: 'single' | 'double') {
   phase.value = 'spin'
   try {
     const resp = await api<DrawResp>('POST', '/api/draws', { mode })
+    // 余额在接口返回处立即更新并飘出 −N，不等转盘转完（那时结果弹窗会盖住这一行）
     balance.value = resp.entry.balanceAfter
+    showFloat(mode === 'single' ? singleCost.value : doubleCost.value)
     if (mode === 'single') {
       const prize = resp.draw.prize!
       await wheelRef.value?.spin(indexOf(prize))
@@ -123,9 +150,11 @@ onMounted(async () => {
 
 <template>
   <div class="pt-2">
-    <p class="text-center text-base-content/60">
-      当前积分
-      <b class="text-primary text-2xl font-bold tabular-nums">{{ balance }}</b>
+    <p v-if="loaded" class="relative flex items-baseline justify-center gap-1.5">
+      <span class="text-base text-base-content/60">当前积分</span>
+      <TickNumber :value="balance" enter class="text-stat text-base-content" />
+      <span class="text-sm text-base-content/55">分</span>
+      <span v-if="floatText" class="float-chip">{{ floatText }}</span>
     </p>
     <WheelCanvas ref="wheelRef" :prizes="prizes" />
     <!-- 选择弹窗打开时，提示改渲染在弹窗内（弹窗处于顶层，行内提示会被遮住） -->
@@ -153,10 +182,7 @@ onMounted(async () => {
     </div>
 
     <!-- 双抽第一轮结果 -->
-    <div
-      v-if="phase === 'first'"
-      class="card mt-4 animate-pop border border-warning bg-warning/10 shadow-sm"
-    >
+    <div v-if="phase === 'first'" class="surface mt-4 animate-pop border-warning bg-warning/10">
       <div class="card-body flex-row flex-wrap items-center justify-between gap-3 py-4">
         <p class="font-semibold">第一抽：{{ firstPrize?.emoji }} {{ firstPrize?.name }}</p>
         <button class="btn btn-ghost max-lg:btn-lg" @click="spinSecond">再转一次 ⟳</button>
