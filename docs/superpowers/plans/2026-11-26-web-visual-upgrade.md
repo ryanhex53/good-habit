@@ -119,10 +119,11 @@ no_horizontal_scroll(360)
 **Files:**
 - Modify: `web/src/layouts/KidLayout.vue`
 - Modify: `web/src/layouts/ParentLayout.vue`
+- Modify: `web/src/components/ui/ThemeToggle.vue`（只加一个可选 `compact` prop，默认行为不变）
 
 **Interfaces:**
 - Consumes: Task 1 的 `.page-enter-active`、`text-title`。
-- Produces: 两个布局的 `<main>` 里都是 `<RouterView v-slot="{ Component }"><Transition name="page" mode="out-in" appear><component :is="Component" /></Transition></RouterView>`。家长端侧栏的结构固定为：`<aside>` → 品牌区 `<div>` → `<nav class="flex-1 overflow-y-auto" aria-label="家长端导航">`（里面依次是三个分组标签 `<div>` 与各自对应的 `<ul class="menu">`，共 7 个链接）→ 账户区 `<div>`；侧栏链接带 `min-h-11 content-center rounded-xl`。孩子端底部 Tab 当前项的图标容器带 `rounded-full bg-primary/12`。
+- Produces: 两个布局的 `<main>` 里都是 `<RouterView v-slot="{ Component }"><Transition name="page" mode="out-in" appear><component :is="Component" /></Transition></RouterView>`。家长端侧栏的结构固定为：`<aside>` → 品牌区 `<div>` → `<nav class="flex-1 overflow-y-auto" aria-label="家长端导航">`（里面依次是三个分组标签 `<div>` 与各自对应的 `<ul class="menu">`，共 7 个链接）→ 账户区 `<div>`；侧栏链接带 `min-h-11 content-center rounded-xl`。导航项的 `to` / `label` / `icon` 在 `ParentLayout.vue` 里只定义一次（分三组），手机页签用的扁平顺序不变。`ThemeToggle` 新增可选 prop `compact?: boolean`：为真时按钮 `btn btn-ghost btn-circle btn-sm`、图标 `size-4`；不传时与现在完全一样。孩子端底部 Tab 当前项的图标容器带 `rounded-full bg-primary/12`。
 
 - [ ] **Step 1: 起服务、写检查、跑出红**
 
@@ -130,6 +131,7 @@ no_horizontal_scroll(360)
 vp(1280, 820); login('parent'); go('/parent/overview', 'light'); shot('t2-overview-d-light')
 check('sidebar groups in order', texts('aside nav > div') == ['日常', '设置', '记录'], texts('aside nav > div'))
 check('sidebar has 7 links', count('aside nav ul a') == 7, count('aside nav ul a'))
+check('sidebar hrefs in nav order', js("[...document.querySelectorAll('aside nav ul a')].map(a => a.getAttribute('href'))") == ['/parent/overview', '/parent/earn', '/parent/children', '/parent/items', '/parent/prizes', '/parent/draws', '/parent/bills'])
 a = rect('aside nav a[aria-current="page"]'); i = rect('aside nav a[aria-current="page"] svg')
 check('active item vertically centred', bool(a and i) and abs((i[1] - a[1]) - (a[1] + a[3] - i[1] - i[3])) <= 1, (a, i))
 check('active item >= 44 high', bool(a) and a[3] >= 44, a)
@@ -153,12 +155,12 @@ check('desktop tabs >= 44 high', bool(rect('.tabs .tab')) and rect('.tabs .tab')
 
 - [ ] **Step 2: 实现**（设计文档 §5.2）
 
-  家长端侧栏按效果图重组：品牌区（星标 `size-9` + `rounded-xl`、"好习惯" `text-title`、"家长端" 说明）；三个分组标签；`links` 数组与顺序不变，链接类名按 Interfaces，当前项加 `bg-primary/10 font-semibold text-brand-ink`；底部账户区。手机顶栏加品牌标记。孩子端顶栏昵称 `text-lg font-semibold`、桌面页签当前项 `font-semibold`、`<main>` 间距、底部 Tab 按效果图。两个布局的 `<main>` 内边距按 §5.2。
+  家长端侧栏按效果图重组：品牌区（星标 `size-9` + `rounded-xl`、"好习惯" `text-title`、"家长端" 说明）；三个分组标签；导航项按设计文档第 161 行分三组（日常 = 总览、登记得分；设置 = 孩子、积分项、奖品与定价；记录 = 待发放、账单），`to` / `label` / `icon` 只写一次，侧栏用嵌套 `v-for` 渲染（外层用 `<template v-for>` 包"分组标签 `<div>` + `<ul class="menu">`"，不引入额外包裹元素），手机页签的扁平顺序不变；链接类名按 Interfaces，当前项加 `bg-primary/10 font-semibold text-brand-ink`；底部账户区的主题按钮写 `<ThemeToggle compact />`，不在布局里内联主题按钮。手机顶栏加品牌标记。孩子端顶栏昵称 `text-lg font-semibold`、桌面页签当前项 `font-semibold`、`<main>` 间距、底部 Tab 按效果图。两个布局的 `<main>` 内边距按 §5.2。
 
 - [ ] **Step 3: 静态核对**
 
-  Run: `grep -c 'name="page"' web/src/layouts/KidLayout.vue web/src/layouts/ParentLayout.vue && grep -c 'content-center' web/src/layouts/ParentLayout.vue`
-  Expected: 两个布局各 1 处 `name="page"`；`content-center` 7 处。
+  Run: `grep -c 'name="page"' web/src/layouts/KidLayout.vue web/src/layouts/ParentLayout.vue && grep -c 'content-center' web/src/layouts/ParentLayout.vue && grep -c "to: '/parent/" web/src/layouts/ParentLayout.vue`
+  Expected: 两个布局各 1 处 `name="page"`；`content-center` 1 处（在 `v-for` 渲染侧栏链接的类名里）；`to: '/parent/` 7 处（每条路径只定义一次）。
 
 - [ ] **Step 4: 重建、跑出绿、看截图**（`t2-overview-d-light`、`t2-overview-d-dark`、`t2-overview-m-light`、`t2-kid-home-m-light`、`t2-kid-home-d-light`，并对照 `.superpowers/mockup-kit/pages/parent-overview.html` 与 `kid-home.html`）
 
