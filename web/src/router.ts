@@ -35,7 +35,7 @@ const routes: RouteRecordRaw[] = [
 
 const router = createRouter({ history: createWebHistory(), routes })
 
-function homeOf(role: 'parent' | 'child'): string {
+export function homeOf(role: 'parent' | 'child'): string {
   return role === 'parent' ? '/parent/overview' : '/kid/home'
 }
 

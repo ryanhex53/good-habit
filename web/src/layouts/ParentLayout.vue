@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSession } from '../session'
+import BaseIcon from '../components/ui/BaseIcon.vue'
+import ThemeToggle from '../components/ui/ThemeToggle.vue'
 
 const router = useRouter()
+const route = useRoute()
 const { me, logout } = useSession()
 
 const links = [
-  { to: '/parent/overview', label: '总览' },
-  { to: '/parent/earn', label: '登记得分' },
-  { to: '/parent/children', label: '孩子' },
-  { to: '/parent/items', label: '积分项' },
-  { to: '/parent/prizes', label: '奖品与定价' },
-  { to: '/parent/draws', label: '待发放' },
-  { to: '/parent/bills', label: '账单' },
+  { to: '/parent/overview', label: '总览', icon: 'list' },
+  { to: '/parent/earn', label: '登记得分', icon: 'plus' },
+  { to: '/parent/children', label: '孩子', icon: 'users' },
+  { to: '/parent/items', label: '积分项', icon: 'check' },
+  { to: '/parent/prizes', label: '奖品与定价', icon: 'gift' },
+  { to: '/parent/draws', label: '待发放', icon: 'star' },
+  { to: '/parent/bills', label: '账单', icon: 'receipt' },
 ]
 
 async function doLogout() {
@@ -22,136 +25,68 @@ async function doLogout() {
 </script>
 
 <template>
-  <div class="parent-shell">
-    <!-- 手机端顶栏（含登出，桌面端隐藏） -->
-    <div class="mobile-bar">
-      <span class="m-brand">好习惯</span>
-      <span class="m-who">{{ me?.displayName }}</span>
-      <button class="ghost mini" @click="doLogout">退出</button>
-    </div>
-    <aside class="side">
-      <div class="brand">好习惯 · 家长端</div>
-      <nav>
-        <RouterLink v-for="l in links" :key="l.to" :to="l.to">{{ l.label }}</RouterLink>
-      </nav>
-      <div class="side-foot">
-        <span>{{ me?.displayName }}</span>
-        <button class="ghost mini" @click="doLogout">退出</button>
+  <div class="min-h-dvh bg-base-200 lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+    <!-- 手机顶栏（含登出，桌面隐藏） -->
+    <header
+      class="sticky top-0 z-30 flex items-center gap-2 border-b border-base-300 bg-base-100 px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] lg:hidden"
+    >
+      <span class="font-extrabold">好习惯</span>
+      <span class="min-w-0 flex-1 truncate text-sm text-base-content/60">
+        {{ me?.displayName }}
+      </span>
+      <ThemeToggle />
+      <button
+        type="button"
+        class="btn btn-ghost btn-circle"
+        aria-label="退出登录"
+        @click="doLogout"
+      >
+        <BaseIcon name="log-out" class="size-5" />
+      </button>
+    </header>
+
+    <!-- 手机页签条（横向可滚） -->
+    <nav class="border-b border-base-300 bg-base-100 px-2 py-2 lg:hidden">
+      <div class="tabs tabs-box min-w-max overflow-x-auto">
+        <RouterLink
+          v-for="l in links"
+          :key="l.to"
+          :to="l.to"
+          class="tab min-h-11 whitespace-nowrap"
+          :class="route.path === l.to ? 'tab-active' : ''"
+        >
+          {{ l.label }}
+        </RouterLink>
+      </div>
+    </nav>
+
+    <!-- 桌面侧栏 -->
+    <aside class="sticky top-0 hidden h-dvh flex-col border-r border-base-300 bg-base-100 p-4 lg:flex">
+      <div class="mb-6 flex items-center justify-between px-2">
+        <div class="text-lg font-extrabold">好习惯 · 家长端</div>
+        <ThemeToggle />
+      </div>
+      <ul class="menu w-full flex-1 gap-1 p-0">
+        <li v-for="l in links" :key="l.to">
+          <RouterLink :to="l.to" class="min-h-11" :class="route.path === l.to ? 'menu-active' : ''">
+            <BaseIcon :name="l.icon" class="size-5" />
+            {{ l.label }}
+          </RouterLink>
+        </li>
+      </ul>
+      <div
+        class="mt-4 flex items-center justify-between gap-2 border-t border-base-300 px-2 pt-3 text-sm text-base-content/60"
+      >
+        <span class="min-w-0 truncate">{{ me?.displayName }}</span>
+        <button type="button" class="btn btn-ghost btn-sm gap-2" @click="doLogout">
+          <BaseIcon name="log-out" class="size-4" />
+          退出
+        </button>
       </div>
     </aside>
-    <main class="main">
+
+    <main class="mx-auto w-full max-w-5xl p-4 lg:p-8">
       <RouterView />
     </main>
   </div>
 </template>
-
-<style scoped>
-.parent-shell {
-  display: flex;
-  min-height: 100vh;
-}
-.side {
-  width: 220px;
-  background: var(--c-card);
-  border-right: 1px solid #eee;
-  display: flex;
-  flex-direction: column;
-  padding: 18px 14px;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-}
-.brand {
-  font-weight: 800;
-  margin-bottom: 18px;
-  padding: 0 8px;
-}
-.side nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-.side nav a {
-  padding: 10px 12px;
-  border-radius: 10px;
-  text-decoration: none;
-  color: var(--c-ink);
-  font-size: 15px;
-}
-.side nav a.router-link-active {
-  background: #fdeadd;
-  color: var(--c-primary);
-  font-weight: 700;
-}
-.side-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 8px;
-  font-size: 14px;
-  color: var(--c-sub);
-}
-.mini {
-  padding: 6px 12px;
-  font-size: 13px;
-}
-.main {
-  flex: 1;
-  padding: 20px;
-  max-width: 980px;
-}
-
-/* ≤768px：侧栏折叠为顶部横向 Tab，另设含登出的顶栏 */
-.mobile-bar {
-  display: none;
-}
-@media (max-width: 768px) {
-  .parent-shell {
-    flex-direction: column;
-  }
-  .mobile-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: var(--c-card);
-    border-bottom: 1px solid #eee;
-  }
-  .m-brand {
-    font-weight: 800;
-  }
-  .m-who {
-    flex: 1;
-    font-size: 14px;
-    color: var(--c-sub);
-  }
-  .side {
-    width: 100%;
-    height: auto;
-    position: static;
-    padding: 10px 12px;
-    border-right: none;
-    border-bottom: 1px solid #eee;
-  }
-  .brand {
-    display: none;
-  }
-  .side-foot {
-    display: none;
-  }
-  .side nav {
-    flex-direction: row;
-    overflow-x: auto;
-    gap: 6px;
-  }
-  .side nav a {
-    white-space: nowrap;
-    padding: 8px 12px;
-    font-size: 14px;
-  }
-  .main {
-    padding: 14px;
-  }
-}
-</style>
