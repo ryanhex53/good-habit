@@ -37,7 +37,7 @@ onBeforeUnmount(() => {
     :aria-label="label"
     @cancel="onCancel"
   >
-    <div class="modal-box animate-pop">
+    <div class="modal-box border-0 shadow-overlay animate-pop">
       <slot />
     </div>
     <form v-if="dismissible" method="dialog" class="modal-backdrop" @click="onBackdrop">

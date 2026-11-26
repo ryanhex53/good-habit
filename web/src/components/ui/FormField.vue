@@ -5,10 +5,10 @@ defineProps<{ label: string; forId?: string; hint?: string; error?: string }>()
 
 <template>
   <div class="w-full">
-    <label v-if="forId" :for="forId" class="label mb-1 justify-start text-sm text-base-content/70">
+    <label v-if="forId" :for="forId" class="field-label">
       {{ label }}
     </label>
-    <span v-else class="label mb-1 justify-start text-sm text-base-content/70">{{ label }}</span>
+    <span v-else class="field-label">{{ label }}</span>
     <slot />
     <p v-if="error" class="label mt-1 justify-start text-xs text-error">{{ error }}</p>
     <p v-else-if="hint" class="label mt-1 justify-start text-xs text-base-content/50">

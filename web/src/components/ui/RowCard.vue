@@ -4,8 +4,8 @@
 </script>
 
 <template>
-  <div class="card bg-base-100 border border-base-300 shadow-sm">
-    <div class="card-body flex-row flex-wrap items-center gap-3 py-4">
+  <div class="surface">
+    <div class="flex flex-row flex-wrap items-center gap-3 px-5 py-4">
       <div v-if="$slots.leading" class="flex shrink-0 items-center gap-3">
         <slot name="leading" />
       </div>

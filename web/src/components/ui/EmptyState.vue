@@ -4,7 +4,7 @@ defineProps<{ text: string; sub?: string }>()
 
 <template>
   <div class="flex flex-col items-center justify-center gap-1 py-10 text-center">
-    <div class="rounded-full bg-base-200 p-4 text-2xl">
+    <div class="border border-base-300 bg-base-100 rounded-full p-4 text-2xl">
       <slot name="icon">🌱</slot>
     </div>
     <p class="text-sm text-base-content/60">{{ text }}</p>

@@ -20,7 +20,7 @@ const lifted = computed(() => route.path.startsWith('/kid'))
       role="status"
       aria-live="polite"
     >
-      <div class="alert alert-success border-none py-2 shadow-lg">
+      <div class="alert alert-success border-none py-2 shadow-overlay">
         <span class="text-sm font-medium">{{ current.message }}</span>
       </div>
     </div>
