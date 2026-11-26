@@ -273,7 +273,8 @@ check('banner: no infinite pulse, wiggle twice', count('.animate-pulse') == 0 an
 min_touch('nav.fixed a'); no_horizontal_scroll(360)
 reduced_motion(True); go('/kid/home', 'light'); wait_for("document.querySelector('.text-hero') !== null")
 check('reduced motion: final value at once', text('.text-hero [aria-hidden="true"]') == '25', text('.text-hero [aria-hidden="true"]'))
-check('reduced motion: css animations off', style('.animate-wiggle', 'animation-duration') == '0.01ms', style('.animate-wiggle', 'animation-duration'))
+dur = style('.animate-wiggle', 'animation-duration'); dur_ms = float(dur[:-2]) if dur.endswith('ms') else float(dur.rstrip('s')) * 1000   # Chrome 把 computed 时长规范化为秒（0.01ms → '1e-05s'），按数值比较
+check('reduced motion: css animations off', dur_ms <= 0.01, dur)
 reduced_motion(False)
 reduced_motion(True)   # 后台标签页里 rAF 不推进，数字会停在起点；下面几条读数值的断言在"减少动态效果"下读取（直接是最终值）
 login_token(new_child('零分孩子')); go('/kid/home', 'light'); wait_for("document.querySelector('.text-hero') !== null")
