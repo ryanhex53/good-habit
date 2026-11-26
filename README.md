@@ -9,7 +9,7 @@
 - **孩子端**：独立登录 → 看余额与得分指南 → 玩 **Canvas 转盘**（单抽 / 保险抽：多付积分抽两次、挑满意的那个）→ 翻积分账单
 - **账单**：每笔记录原因、±积分、所得奖品、**当时余额快照**，余额永不为负
 - **奖品发放**：孩子中奖后家长在后台标记"已发放"
-- 桌面与手机响应式，全中文界面
+- 桌面与手机响应式，全中文界面；深浅双主题（跟随系统 + 手动切换，Tailwind CSS 4 + daisyUI 5）
 
 ## 架构速览
 
@@ -35,7 +35,7 @@ go run ./cmd/good-habit
 cd web && npm install && npm run dev
 ```
 
-打开 Vite 打印的地址 → 注册一个家长账号 → 总览页「一键导入示例」即可体验全流程。
+打开 Vite 打印的地址 → 注册一个家长账号，到「孩子 / 积分项 / 奖品」页配几条数据即可体验全流程（示例模板可经 `POST /api/bootstrap` 导入，需登录会话）。
 
 ## 构建 / 部署
 
@@ -63,7 +63,7 @@ internal/
   sweep/            48h 超时待选局清扫
   seed/             附录 A 示例数据
   webui/            前端构建产物 embed（dist/）
-web/                Vue 3 + TypeScript + Vite 源码
+web/                Vue 3 + TypeScript + Vite + Tailwind/daisyUI 源码
 migrations/         SQL 迁移（embed 进二进制）
 deploy/             systemd / Litestream / restore 脚本 / 部署文档
 ```
@@ -72,7 +72,7 @@ deploy/             systemd / Litestream / restore 脚本 / 部署文档
 
 ```bash
 go test ./... -timeout 300s        # 12 个包：单测 + 全旅程集成（真实 SQLite，无 mock）
-cd web && npm run build            # vue-tsc 类型检查 + 构建
+cd web && npm run build            # vue-tsc 类型检查 + 构建（Tailwind/daisyUI 编译产物）
 ```
 
 并发正确性另有 `-race` 建议在 Linux/CI 侧执行（Windows 无 gcc 时不可用；测试本身已用精确计数断言兜底）。

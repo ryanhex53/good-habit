@@ -13,6 +13,7 @@
 | 转盘概率 | **均等概率**（每个奖品等机率，扇区均匀） |
 | 后端架构 | 严格按用户的硬性要求执行（见 §6，逐条对应） |
 | 界面语言 | 简体中文；桌面 + 手机响应式 |
+| UI 框架 | **Tailwind CSS 4 + daisyUI 5**（纯 CSS 自托管、深浅双主题；2026-11-26 用户决定，取代「手写 CSS」裁量项） |
 
 ---
 
@@ -332,10 +333,10 @@ CREATE TABLE schema_migrations (
 - 注册无邮箱验证（自部署 + 限流下接受；反目标：引入 SMTP）。
 
 ## 11. 前端设计（Vue 3 + Vite + TypeScript）
-- 依赖仅 `vue`、`vue-router`；状态用轻量 composable（`useSession`/`useWheel`…），不引 Pinia/UI 框架；样式手写 CSS（构建时按 frontend-design 技能出设计方案）。
+- 依赖 `vue`、`vue-router` + 构建期 Tailwind CSS 4 / daisyUI 5（纯 CSS 组件类，无 JS 运行时，产物自托管）；状态用轻量 composable，不引 Pinia。
 - 路由：`/login`、`/register`、`/kid/{home,wheel,bills}`、`/parent/{overview,earn,children,items,prizes,draws,bills}`；`/` 按角色跳转。
 - 转盘：Canvas 2D 组件，扇区 = 启用奖品均分（含 emoji + 名称），`requestAnimationFrame` + 三次缓出 ~4s，结果扇区对准顶部指针；单抽一轮动画，保险抽两轮 + 双卡选择界面 + 确认弹窗。
-- 手机优先：孩子端底部 Tab；家长端 ≤768px 折叠为顶部 Tab。桌面居中内容栏（≤1100px）。
+- 手机优先：孩子端底部 Tab；家长端 lg（1024px）以下折叠为顶部 Tab。桌面居中内容栏。
 - 构建：`web/` 下 `npm run build` → `web/dist` → Go `//go:embed all:web/dist`（Makefile/build 脚本固定"先前端后 Go"顺序；`web/dist` 不入库）。
 - 开发：Vite dev server 代理 `/api` → `localhost:8080`；Go 侧 `go run` 即后端。
 
@@ -372,7 +373,7 @@ CREATE TABLE schema_migrations (
 1. SQLite 驱动 modernc.org/sqlite（无 CGO）；DSN 里 `_query_only` 以 `_pragma=query_only(1)` 等价表达，语义以"读池物理只读+query_only、写池 immediate"为准。
 2. ReadDB 连接数默认 5（4–6 可调）。
 3. 双抽 pending_choice 模型：48h 超时自动选 A；启动+每小时清扫。
-4. 前端 TypeScript；不引 Pinia/组件库。
+4. 前端 TypeScript；不引 Pinia；UI 用 daisyUI 5（原「手写 CSS」已于 2026-11-26 升级为 Tailwind/daisyUI，见 §0）。
 5. 孩子软删除（历史保留）；积分项/奖品软删除同理。
 6. 手动调整、CLI 重置密码、示例数据一键导入。
 7. 限流阈值（§6.8）、会话 30 天、bcrypt cost 10、busy_timeout 数值。

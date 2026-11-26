@@ -1,13 +1,17 @@
 /* ============================================================
    好习惯 · 全局样式入口（Tailwind CSS 4 + daisyUI 5）
    - 只启用定制过的 light / dark 两套主题（品牌橙 #e8630a）
-   - legacy.css 是旧手写样式的过渡层，阶段 7 删除
    ============================================================ */
 @import "tailwindcss";
-@import "./legacy.css" layer(components);
 
 @plugin "daisyui" {
   themes: light --default, dark --prefersdark;
+  /* 裁掉未使用的组件与 theme-controller 选择器（主题切换走 JS） */
+  exclude: themecontroller, toggle, drawer, fieldset, textarea, table, fab, textrotate, radio,
+    countdown, hover3d, dock, stack, filter, steps, skeleton, swap, range, kbd, status, checkbox,
+    list, hovergallery, divider, progress, diff, radialprogress, aura, indicator, fileinput,
+    rating, mockup, timeline, mask, megamenu, breadcrumbs, validator, avatar, otp, calendar, chat,
+    dropdown, tooltip, hero, carousel, footer, glass, radius, typography;
 }
 
 /* 浅色主题（未写的令牌继承内置 light） */
@@ -133,44 +137,4 @@
 .toast-fade-enter-from,
 .toast-fade-leave-to {
   opacity: 0;
-}
-
-/* ============================================================
-   过渡护栏（阶段 7 全部删除）：daisyUI 组件类与旧模板类名撞车，
-   未迁移页面靠这几条非分层规则维持原样。
-   ============================================================ */
-
-/* 旧全局 .card（白底 18px 内边距 14px 圆角阴影）vs daisyUI .card（flex 容器）。
-   新卡片一律 .card + .card-body，天然被 :not(:has(.card-body)) 排除。 */
-.card:not(:has(.card-body)) {
-  display: block;
-  flex-direction: row;
-  padding: 1.125rem;
-  background-color: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 2px 10px rgba(43, 39, 34, 0.06);
-}
-
-/* 旧 <p class="… toast"> 是行内提示，不是 daisyUI 的固定角标 toast */
-p.toast {
-  position: static;
-  inset: auto;
-  translate: none;
-  display: block;
-  width: auto;
-  max-width: none;
-}
-
-/* 旧遮罩弹窗的 .modal 是 div；daisyUI 的 .modal 面向 <dialog>（默认 visibility:hidden） */
-div.modal:not(dialog) {
-  visibility: visible;
-  pointer-events: auto;
-  position: static;
-  inset: auto;
-  width: auto;
-  height: auto;
-  max-height: none;
-  display: block;
-  z-index: auto;
-  background-color: transparent;
 }
