@@ -23,15 +23,15 @@ const deltaClass: Record<string, string> = {
 </script>
 
 <template>
-  <div class="card border border-base-300 bg-base-100 shadow-sm">
-    <div class="card-body flex-row items-center gap-3 py-3.5">
+  <div class="surface">
+    <div class="flex items-center gap-3 px-5 py-3.5">
       <span class="shrink-0 text-xl">{{ icon }}</span>
       <div class="min-w-0 flex-1">
-        <p class="truncate text-sm font-semibold">{{ reason }}</p>
+        <p class="truncate text-base font-medium">{{ reason }}</p>
         <p class="text-xs text-base-content/60">{{ fmtTime(row.createdAt) }}</p>
       </div>
       <div class="shrink-0 text-right">
-        <p class="text-lg font-extrabold tabular-nums" :class="deltaClass[row.kind]">
+        <p class="text-lg font-semibold tabular-nums" :class="deltaClass[row.kind]">
           {{ row.delta > 0 ? '+' : '' }}{{ row.delta }}
         </p>
         <p class="text-xs text-base-content/60">当时 {{ row.balanceAfter }}</p>
