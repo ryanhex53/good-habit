@@ -95,7 +95,7 @@ check('theme-color meta = page colour', js("document.querySelector('meta[name=th
 logout(); vp(390, 844, 2, True); go('/login', 'light'); shot('t1-login-m-light'); go('/login', 'dark'); shot('t1-login-m-dark')
 dark_hierarchy('.card')
 names = js("(() => { const t = new Set(); for (const s of document.styleSheets) { try { for (const r of s.cssRules) { for (const k of ['.surface', '.divided', '.stagger', '.field-label', '.status-chip', '.float-chip', '.page-enter-active']) if (r.cssText.includes(k)) t.add(k); } } catch (e) {} } return [...t].sort().join(' '); })()")
-check('compiled css has the component classes', names == '.divided .field-label .float-chip .page-enter-active .status-chip .stagger .surface', names)
+check('compiled css has the component classes', names == '.divided .field-label .float-chip .page-enter-active .stagger .status-chip .surface', names)
 no_horizontal_scroll(360)
 ```
 
