@@ -2,6 +2,9 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../../api'
 import BillRow from '../../components/BillRow.vue'
+import EmptyState from '../../components/ui/EmptyState.vue'
+import ListStatus from '../../components/ui/ListStatus.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
 import type { ChildView, LedgerPage, LedgerRow } from '../../types'
 
 const children = ref<ChildView[]>([])
@@ -52,44 +55,23 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 
 <template>
   <div>
-    <h2>家庭账单</h2>
-    <div class="filters">
-      <select v-model.number="childId" @change="switchChild">
+    <PageHeader title="家庭账单" />
+
+    <div class="mb-4">
+      <select
+        v-model.number="childId"
+        class="select w-full max-w-[240px] text-base max-lg:select-lg"
+        @change="switchChild"
+      >
         <option :value="0">全部孩子</option>
         <option v-for="c in children" :key="c.id" :value="c.id">{{ c.displayName }}</option>
       </select>
     </div>
-    <p v-if="rows.length === 0 && !loading" class="empty">还没有账单记录</p>
-    <div class="list">
+
+    <EmptyState v-if="rows.length === 0 && !loading" text="还没有账单记录" />
+    <div class="flex flex-col gap-2">
       <BillRow v-for="r in rows" :key="r.id" :row="r" />
     </div>
-    <p v-if="loading" class="loading">加载中…</p>
-    <p v-else-if="done && rows.length > 0" class="loading">— 没有更多了 —</p>
+    <ListStatus :loading="loading" :done="done && rows.length > 0" />
   </div>
 </template>
-
-<style scoped>
-h2 {
-  margin-bottom: 12px;
-}
-.filters select {
-  max-width: 200px;
-  margin-bottom: 14px;
-}
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.empty {
-  color: var(--c-sub);
-  padding: 40px 0;
-  text-align: center;
-}
-.loading {
-  text-align: center;
-  color: var(--c-sub);
-  font-size: 13px;
-  padding: 14px 0 30px;
-}
-</style>

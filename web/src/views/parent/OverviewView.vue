@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api } from '../../api'
+import EmptyState from '../../components/ui/EmptyState.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
 import type { OverviewInfo } from '../../types'
 
 const info = ref<OverviewInfo | null>(null)
@@ -12,103 +14,47 @@ onMounted(async () => {
 
 <template>
   <div>
-    <h2>总览</h2>
-    <div class="stats">
-      <div class="card stat">
-        <p class="num">{{ info?.todayEarns ?? 0 }}</p>
-        <p class="lbl">今日得分笔数</p>
+    <PageHeader title="总览" />
+
+    <div class="stats w-full border border-base-300 bg-base-100 shadow-sm">
+      <div class="stat">
+        <div class="stat-value text-primary text-4xl tabular-nums">{{ info?.todayEarns ?? 0 }}</div>
+        <div class="stat-title">今日得分笔数</div>
       </div>
     </div>
-    <div class="kids">
-      <div v-for="c in info?.children ?? []" :key="c.id" class="card kid">
-        <div class="row1">
-          <span class="name">{{ c.displayName }}</span>
-          <span class="badges">
-            <em v-if="c.hasPending" class="b warn">待选奖品</em>
-            <em v-if="c.unfulfilled > 0" class="b">{{ c.unfulfilled }} 个待发放</em>
-          </span>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div
+        v-for="c in info?.children ?? []"
+        :key="c.id"
+        class="card border border-base-300 bg-base-100 shadow-sm"
+      >
+        <div class="card-body gap-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-lg font-bold">{{ c.displayName }}</span>
+            <span class="flex flex-wrap gap-1.5">
+              <em v-if="c.hasPending" class="badge badge-warning badge-soft not-italic">
+                待选奖品
+              </em>
+              <em v-if="c.unfulfilled > 0" class="badge badge-soft not-italic">
+                {{ c.unfulfilled }} 个待发放
+              </em>
+            </span>
+          </div>
+          <p class="text-sm text-base-content/60">
+            <b class="text-3xl font-extrabold tabular-nums text-base-content">{{ c.balance }}</b>
+            分
+          </p>
+          <RouterLink class="link link-primary text-sm" :to="`/parent/earn?child=${c.id}`">
+            去登记得分 ›
+          </RouterLink>
         </div>
-        <p class="bal">
-          <b>{{ c.balance }}</b> 分
-        </p>
-        <RouterLink class="go-earn" :to="`/parent/earn?child=${c.id}`">去登记得分 ›</RouterLink>
       </div>
-      <p v-if="info && info.children.length === 0" class="empty">
-        还没有孩子账号，先去「孩子」页添加一个
-      </p>
     </div>
+
+    <EmptyState
+      v-if="info && info.children.length === 0"
+      text="还没有孩子账号，先去「孩子」页添加一个"
+    />
   </div>
 </template>
-
-<style scoped>
-h2 {
-  margin-bottom: 14px;
-}
-.stats {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-.stat {
-  flex: 1;
-  text-align: center;
-}
-.num {
-  font-size: 34px;
-  font-weight: 800;
-  color: var(--c-primary);
-}
-.lbl {
-  font-size: 13px;
-  color: var(--c-sub);
-}
-.kids {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 12px;
-}
-.kid .row1 {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.name {
-  font-size: 17px;
-  font-weight: 700;
-}
-.badges {
-  display: flex;
-  gap: 6px;
-}
-.b {
-  font-style: normal;
-  font-size: 12px;
-  background: #fff2e4;
-  color: var(--c-primary);
-  padding: 2px 8px;
-  border-radius: 20px;
-}
-.b.warn {
-  background: #fff7e8;
-  color: #b06a00;
-}
-.bal {
-  font-size: 14px;
-  color: var(--c-sub);
-  margin: 8px 0 4px;
-}
-.bal b {
-  font-size: 30px;
-  color: var(--c-ink);
-}
-.go-earn {
-  font-size: 13px;
-  color: var(--c-primary);
-  text-decoration: none;
-}
-.empty {
-  color: var(--c-sub);
-  padding: 30px 0;
-}
-</style>

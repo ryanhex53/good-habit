@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api, errMsg } from '../../api'
+import { useToast } from '../../composables/useToast'
+import EmptyState from '../../components/ui/EmptyState.vue'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import RowCard from '../../components/ui/RowCard.vue'
 import { fmtTime, type ChildView, type DrawListItem } from '../../types'
 
 const draws = ref<DrawListItem[]>([])
 const children = ref<ChildView[]>([])
 const error = ref('')
-const toast = ref('')
 const loading = ref(false)
+const toast = useToast()
 
 async function load() {
   loading.value = true
@@ -23,8 +27,7 @@ async function fulfill(d: DrawListItem) {
   error.value = ''
   try {
     await api('PATCH', `/api/draws/${d.uuid}/fulfill`)
-    toast.value = `已发放：${d.prizeName}（${d.childName}）`
-    setTimeout(() => (toast.value = ''), 2200)
+    toast.show(`已发放：${d.prizeName}（${d.childName}）`, 2200)
     load()
   } catch (e) {
     error.value = errMsg(e)
@@ -36,58 +39,33 @@ onMounted(load)
 
 <template>
   <div>
-    <h2>待发放奖品</h2>
-    <p class="err">{{ error }}</p>
-    <p v-if="toast" class="ok-note">{{ toast }}</p>
+    <PageHeader title="待发放奖品" />
+    <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
 
-    <p v-if="!loading && draws.length === 0" class="empty">
-      没有待发放的奖品 —— 孩子中奖后会出现在这里
-    </p>
+    <div v-if="loading" class="flex justify-center py-10">
+      <span class="loading loading-spinner" />
+    </div>
+    <EmptyState
+      v-else-if="draws.length === 0"
+      text="没有待发放的奖品"
+      sub="孩子中奖后会出现在这里"
+    />
 
-    <div class="list">
-      <div v-for="d in draws" :key="d.uuid" class="card row">
-        <div class="info">
-          <p class="who">{{ d.childName }} 抽中 <b>{{ d.prizeName }}</b></p>
-          <p class="sub">
-            {{ d.mode === 'double' ? '保险抽' : '单抽' }} · {{ d.cost }} 分 ·
-            {{ fmtTime(d.createdAt) }}
-          </p>
-        </div>
-        <button @click="fulfill(d)">标记已发放</button>
-      </div>
+    <div v-else class="flex flex-col gap-3">
+      <RowCard v-for="d in draws" :key="d.uuid">
+        <p class="text-sm">
+          {{ d.childName }} 抽中
+          <b class="text-primary">{{ d.prizeName }}</b>
+        </p>
+        <p class="mt-0.5 text-xs text-base-content/60">
+          {{ d.mode === 'double' ? '保险抽' : '单抽' }} · {{ d.cost }} 分 · {{ fmtTime(d.createdAt) }}
+        </p>
+        <template #actions>
+          <button class="btn btn-primary btn-sm max-lg:min-h-11" @click="fulfill(d)">
+            标记已发放
+          </button>
+        </template>
+      </RowCard>
     </div>
   </div>
 </template>
-
-<style scoped>
-h2 {
-  margin-bottom: 14px;
-}
-.empty {
-  color: var(--c-sub);
-  padding: 30px 0;
-  text-align: center;
-}
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.who {
-  font-size: 15px;
-}
-.who b {
-  color: var(--c-primary);
-}
-.sub {
-  font-size: 12px;
-  color: var(--c-sub);
-  margin-top: 3px;
-}
-</style>
