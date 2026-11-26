@@ -317,7 +317,7 @@ reduced_motion(False)
 - [ ] **Step 1: 起服务、写检查、跑出红**
 
 ```python
-vp(390, 844, 2, True); login('yu'); go('/kid/bills', 'light'); shot('t5-kid-bills-m-light')
+vp(390, 844, 2, True); login('ming'); go('/kid/bills', 'light'); shot('t5-kid-bills-m-light')   # 小明有 8 笔得分，下面的 :nth-child(8) 才存在（小雨只有 6 笔）
 wait_for("document.querySelectorAll('.stagger .surface').length >= 4")
 check('rows have no shadow', style('.stagger .surface', 'box-shadow') == 'none', style('.stagger .surface', 'box-shadow'))
 check('row title 16px/500', style('.stagger .surface p', 'font-size') == '16px' and style('.stagger .surface p', 'font-weight') == '500', (style('.stagger .surface p', 'font-size'), style('.stagger .surface p', 'font-weight')))
