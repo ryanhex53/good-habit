@@ -1,6 +1,10 @@
 /* ============================================================
    好习惯 · 全局样式入口（Tailwind CSS 4 + daisyUI 5）
    - 只启用定制过的 light / dark 两套主题（品牌橙 #e8630a）
+   - 设计刻度：字号 hero/display/stat/title（@theme）；表面三层 =
+     页面 base-200 → 纸面 .surface → 内嵌 .inset；阴影两层
+     shadow-overlay / shadow-hero；动效 rise / float-up / bump /
+     wiggle（+ 既有 pop）
    ============================================================ */
 @import "tailwindcss";
 
@@ -60,8 +64,9 @@
   prefersdark: true;
   color-scheme: dark;
 
-  --color-base-100: #1b1917;
-  --color-base-200: #232019;
+  /* 层级方向与浅色一致：纸面（base-100）比页面（base-200）亮一级 */
+  --color-base-100: #232019;
+  --color-base-200: #1b1917;
   --color-base-300: #2e2a24;
   --color-base-content: #efe9df;
 
@@ -108,6 +113,72 @@
       opacity: 0;
     }
   }
+
+  /* ---- 字号刻度：每一档只担任一个角色 ---- */
+  --text-hero: 4rem;
+  --text-hero--line-height: 1;
+  --text-hero--font-weight: 700;
+  --text-hero--letter-spacing: -0.02em;
+  --text-hero-lg: 4.5rem;
+  --text-hero-lg--line-height: 1;
+  --text-display: 2rem;
+  --text-display--line-height: 1.2;
+  --text-display--font-weight: 600;
+  --text-display--letter-spacing: -0.01em;
+  --text-stat: 1.75rem;
+  --text-stat--line-height: 1.25;
+  --text-stat--font-weight: 600;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.4;
+  --text-title--font-weight: 600;
+
+  /* ---- 阴影只有两层：浮层、孩子端主数字卡 ---- */
+  --shadow-overlay: 0 16px 40px -12px rgb(43 39 34 / 0.28);
+  --shadow-hero: 0 12px 28px -10px rgb(232 99 10 / 0.5);
+
+  /* ---- 动效词汇表 ---- */
+  --animate-rise: rise 0.22s ease-out both;
+  --animate-float-up: float-up 0.7s ease-out both;
+  --animate-bump: bump 0.32s ease-out;
+  --animate-wiggle: wiggle 0.5s ease-in-out 2;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes float-up {
+    from {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    to {
+      opacity: 0;
+      transform: translate(-50%, -28px);
+    }
+  }
+  @keyframes bump {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    35% {
+      transform: scale(1.06);
+    }
+  }
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(0);
+    }
+    25% {
+      transform: rotate(-8deg);
+    }
+    75% {
+      transform: rotate(8deg);
+    }
+  }
 }
 
 [data-theme="dark"] {
@@ -119,6 +190,67 @@
      daisyUI 自身已是 600 字重；尺寸变体（btn-sm/lg…）与文字工具类仍可覆盖。 */
   .btn {
     --fontsize: 1rem;
+  }
+  /* 浅色橙字一律用 brand-ink；soft 变体默认拿 primary 当前景 */
+  .btn-soft.btn-primary {
+    --btn-rest-fg: var(--color-brand-ink);
+  }
+
+  /* ---- 表面 ---- */
+  .surface {
+    @apply rounded-2xl border border-base-300 bg-base-100;
+  }
+  .inset {
+    @apply rounded-2xl bg-base-200;
+  }
+  .divided > * + * {
+    @apply border-t border-base-300/80;
+  }
+
+  /* 清单进场：逐行上浮，最多错开 8 行 */
+  .stagger > * {
+    @apply animate-rise;
+  }
+  .stagger > *:nth-child(2) {
+    animation-delay: 30ms;
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: 60ms;
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: 90ms;
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: 120ms;
+  }
+  .stagger > *:nth-child(6) {
+    animation-delay: 150ms;
+  }
+  .stagger > *:nth-child(7) {
+    animation-delay: 180ms;
+  }
+  .stagger > *:nth-child(n + 8) {
+    animation-delay: 210ms;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-sm font-medium text-base-content/70;
+  }
+
+  /* 状态胶囊：状态色只出现在圆点上，文字始终用文字色 */
+  .status-chip {
+    @apply inline-flex h-6 items-center gap-1.5 rounded-full bg-base-200 px-2.5 text-xs font-medium whitespace-nowrap text-base-content/75;
+  }
+
+  /* 浮动的 ±N：放在包住触发元素的定位容器里（.btn 会裁掉溢出内容） */
+  .float-chip {
+    @apply pointer-events-none absolute top-1 left-1/2 z-10 rounded-full bg-success px-2 py-0.5 text-sm font-semibold text-success-content;
+    animation: var(--animate-float-up);
+  }
+
+  /* 路由过渡：新页面上浮进场 */
+  .page-enter-active {
+    animation: var(--animate-rise);
   }
 }
 
@@ -133,12 +265,15 @@
   }
 }
 
-/* ToastHost 的淡入淡出（Vue <Transition name="toast-fade">） */
+/* ToastHost 的淡入淡出（Vue <Transition name="toast-fade">）：上移 8px + 淡入淡出 */
 .toast-fade-enter-active,
 .toast-fade-leave-active {
-  transition: opacity 0.25s;
+  transition:
+    opacity 0.25s,
+    transform 0.2s;
 }
 .toast-fade-enter-from,
 .toast-fade-leave-to {
   opacity: 0;
+  transform: translateY(8px);
 }
