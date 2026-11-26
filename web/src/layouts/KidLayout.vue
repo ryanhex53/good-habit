@@ -28,7 +28,7 @@ async function doLogout() {
   <div class="min-h-dvh bg-base-200">
     <!-- 顶栏：昵称 + 主题切换 + 登出（触控目标 ≥44px） -->
     <header class="navbar min-h-14 bg-base-100 px-3 pt-[env(safe-area-inset-top)]">
-      <div class="flex-1 truncate font-bold">{{ me?.displayName }}</div>
+      <div class="flex-1 truncate text-lg font-semibold">{{ me?.displayName }}</div>
       <div class="flex items-center gap-1">
         <ThemeToggle />
         <button
@@ -51,7 +51,7 @@ async function doLogout() {
           :key="l.to"
           :to="l.to"
           class="tab min-h-11 gap-2"
-          :class="isActive(l.to) ? 'tab-active text-brand-ink' : ''"
+          :class="isActive(l.to) ? 'tab-active font-semibold text-brand-ink' : ''"
           :aria-current="isActive(l.to) ? 'page' : undefined"
         >
           <BaseIcon :name="l.icon" class="size-4" />
@@ -61,26 +61,39 @@ async function doLogout() {
     </nav>
 
     <main
-      class="mx-auto w-full max-w-2xl px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:pb-16"
+      class="mx-auto w-full max-w-2xl px-4 pt-6 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:px-6 lg:pt-8 lg:pb-16"
     >
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition name="page" mode="out-in" appear>
+          <component :is="Component" />
+        </Transition>
+      </RouterView>
     </main>
 
-    <!-- 手机底部 Tab 栏（不用 daisyUI dock：小屏会隐藏文字标签） -->
+    <!-- 手机底部 Tab 栏（不用 daisyUI dock：小屏会隐藏文字标签）；当前页图标坐在一枚浅橙胶囊里 -->
     <nav
-      class="fixed inset-x-0 bottom-0 z-10 flex border-t border-base-300 bg-base-100 pb-[env(safe-area-inset-bottom)] lg:hidden"
+      class="fixed inset-x-0 bottom-0 z-10 border-t border-base-300 bg-base-100 pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      <RouterLink
-        v-for="l in links"
-        :key="l.to"
-        :to="l.to"
-        class="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5"
-        :class="isActive(l.to) ? 'font-semibold text-brand-ink' : 'text-base-content/60'"
-        :aria-current="isActive(l.to) ? 'page' : undefined"
-      >
-        <BaseIcon :name="l.icon" class="size-5" />
-        <span class="text-xs">{{ l.label }}</span>
-      </RouterLink>
+      <div class="mx-auto grid max-w-2xl grid-cols-3">
+        <RouterLink
+          v-for="l in links"
+          :key="l.to"
+          :to="l.to"
+          class="flex min-h-14 flex-col items-center justify-center gap-0.5"
+          :class="isActive(l.to) ? '' : 'text-base-content/60'"
+          :aria-current="isActive(l.to) ? 'page' : undefined"
+        >
+          <span
+            class="flex h-7 w-12 items-center justify-center"
+            :class="isActive(l.to) ? 'rounded-full bg-primary/12' : ''"
+          >
+            <BaseIcon :name="l.icon" class="size-5" :class="isActive(l.to) ? 'text-brand-ink' : ''" />
+          </span>
+          <span class="text-xs" :class="isActive(l.to) ? 'font-semibold text-brand-ink' : 'font-medium'">
+            {{ l.label }}
+          </span>
+        </RouterLink>
+      </div>
     </nav>
   </div>
 </template>
