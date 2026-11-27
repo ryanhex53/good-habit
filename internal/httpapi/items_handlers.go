@@ -254,6 +254,7 @@ func (s *server) resolveChildIDs(familyID int64, ids []int64) ([]int64, *APIErro
 			return nil, &APIError{Status: http.StatusUnprocessableEntity, Code: "child_not_found", Msg: "孩子不存在或已停用"}
 		}
 		if err != nil {
+			slog.Error("查孩子失败", "err", err, "family_id", familyID)
 			return nil, &APIError{Status: http.StatusInternalServerError, Code: "internal", Msg: "查孩子失败"}
 		}
 		out = append(out, id)

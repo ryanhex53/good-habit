@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { api, errMsg } from '../../api'
+import { api, ApiError, errMsg } from '../../api'
 import { useDialogs } from '../../composables/useDialogs'
 import ChildScopeChips from '../../components/ChildScopeChips.vue'
 import ItemScopeDialog from '../../components/ItemScopeDialog.vue'
@@ -50,6 +50,11 @@ async function create() {
     newScope.value = 'all'
     load()
   } catch (e) {
+    // 陈旧 newScope（勾选的孩子已在别处被停用）→ 回到所有孩子并刷新，别让「添加」卡死在 422
+    if (e instanceof ApiError && e.code === 'child_not_found') {
+      newScope.value = 'all'
+      await load()
+    }
     error.value = errMsg(e)
   }
 }

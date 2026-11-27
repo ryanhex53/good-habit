@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, errMsg } from '../../api'
+import { api, ApiError, errMsg } from '../../api'
 import { useDialogs } from '../../composables/useDialogs'
 import { useToast } from '../../composables/useToast'
 import TickNumber from '../../components/TickNumber.vue'
@@ -101,6 +101,8 @@ async function earn(item: ItemView) {
         floatTimer = window.setTimeout(() => (float.value = null), 750)
       }
     } catch (e) {
+      // 陈旧标签页：范围刚被别的标签页改掉 → 立即刷新，别让过期格子留在页面上
+      if (e instanceof ApiError && e.code === 'item_not_applicable') load()
       error.value = errMsg(e)
     }
   } finally {

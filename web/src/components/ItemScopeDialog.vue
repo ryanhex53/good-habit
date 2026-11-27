@@ -46,7 +46,9 @@ async function save(): Promise<void> {
       <ChildScopeChips v-model="draft" :children="children" />
       <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
       <div class="modal-action">
-        <button type="button" class="btn btn-ghost max-lg:btn-lg" @click="emit('close')">取消</button>
+        <button type="button" class="btn btn-ghost max-lg:btn-lg" :disabled="saving" @click="emit('close')">
+          取消
+        </button>
         <button
           type="button"
           class="btn btn-primary max-lg:btn-lg"

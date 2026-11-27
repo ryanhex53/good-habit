@@ -219,6 +219,7 @@ CREATE TABLE reward_items (
 );
 CREATE INDEX idx_reward_items_family ON reward_items(family_id, active, sort);
 
+-- 0002_reward_item_children.sql
 CREATE TABLE reward_item_children (
   reward_item_id INTEGER NOT NULL REFERENCES reward_items(id),
   child_id       INTEGER NOT NULL REFERENCES users(id),

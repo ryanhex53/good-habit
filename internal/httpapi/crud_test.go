@@ -188,6 +188,11 @@ func TestRewardItemChildScope(t *testing.T) {
 	}, pc); rr.Code != 422 || errCode(t, rr) != "child_not_found" {
 		t.Errorf("create 非法 childIds = %d %s, want 422 child_not_found", rr.Code, rr.Body.String())
 	}
+	for _, it := range list() {
+		if it.Title == "坏" {
+			t.Errorf("create 422 后半写出了项「坏」: %+v", it)
+		}
+	}
 
 	// 跨家庭：B 家长带 childIds PATCH A 家的项 → 404
 	if rr := doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{"childIds": []int64{}}, parentCookie(other.Token)); rr.Code != 404 {
