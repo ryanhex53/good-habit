@@ -8,11 +8,25 @@ import (
 	"sync/atomic"
 )
 
-// RewardItem 是内存快照里的积分项（active-only）。
+// RewardItem 是内存快照里的积分项（active-only）。ChildIDs 为空 = 对所有孩子生效。
 type RewardItem struct {
-	ID     int64
-	Title  string
-	Points int64
+	ID       int64
+	Title    string
+	Points   int64
+	ChildIDs []int64
+}
+
+// AppliesTo 报告该项能否记给 childID：未指定孩子（ChildIDs 为空）对所有孩子生效。
+func (it RewardItem) AppliesTo(childID int64) bool {
+	if len(it.ChildIDs) == 0 {
+		return true
+	}
+	for _, id := range it.ChildIDs {
+		if id == childID {
+			return true
+		}
+	}
+	return false
 }
 
 // Prize 是内存快照里的转盘奖品（active-only）。

@@ -25,8 +25,8 @@ func newDB(t *testing.T) *db.DBs {
 }
 
 type tf struct {
-	aFam, bFam, cFam                       int64
-	aParent, aChild, bChild, cChild        int64
+	aFam, bFam, cFam                int64
+	aParent, aChild, bChild, cChild int64
 }
 
 func seed(t *testing.T, dbs *db.DBs) tf {
@@ -106,10 +106,18 @@ func seed(t *testing.T, dbs *db.DBs) tf {
 			active int64
 			sort   int64
 		}{{"X1", 7, 1, 2}, {"X2", 5, 1, 1}, {"X3", 10, 0, 0}} {
-			if _, err := tx.Exec(
+			res, err := tx.Exec(
 				"INSERT INTO reward_items (family_id, title, points, active, sort, created_at) VALUES (?,?,?,?,?,?)",
-				f.aFam, it.title, it.points, it.active, it.sort, now); err != nil {
+				f.aFam, it.title, it.points, it.active, it.sort, now)
+			if err != nil {
 				return err
+			}
+			// X2 只给娃A；其余不写关联行 = 所有孩子
+			if it.title == "X2" {
+				id, _ := res.LastInsertId()
+				if _, err := tx.Exec("INSERT INTO reward_item_children (reward_item_id, child_id) VALUES (?,?)", id, f.aChild); err != nil {
+					return err
+				}
 			}
 		}
 		if _, err := tx.Exec(
@@ -191,6 +199,27 @@ func TestLoadAllRebuild(t *testing.T) {
 	fb := s.Family(f.bFam)
 	if fb == nil || len(fb.Items) != 1 || len(fb.Prizes) != 1 {
 		t.Errorf("B 家配置不符: %+v", fb)
+	}
+
+	if len(fc.Items[0].ChildIDs) != 1 || fc.Items[0].ChildIDs[0] != f.aChild {
+		t.Errorf("X2 的 ChildIDs = %v, want [%d]", fc.Items[0].ChildIDs, f.aChild)
+	}
+	if len(fc.Items[1].ChildIDs) != 0 {
+		t.Errorf("X1 应为所有孩子（ChildIDs 为空）: %v", fc.Items[1].ChildIDs)
+	}
+}
+
+func TestRewardItemAppliesTo(t *testing.T) {
+	all := RewardItem{ID: 1}
+	if !all.AppliesTo(42) || !all.AppliesTo(7) {
+		t.Error("未指定孩子应对所有人生效")
+	}
+	scoped := RewardItem{ID: 2, ChildIDs: []int64{7, 9}}
+	if !scoped.AppliesTo(7) || !scoped.AppliesTo(9) {
+		t.Error("指定孩子应生效")
+	}
+	if scoped.AppliesTo(8) {
+		t.Error("未指定的孩子不应生效")
 	}
 }
 

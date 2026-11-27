@@ -191,6 +191,31 @@ func (s *Store) loadFamily(dbs *db.DBs, familyID int64) error {
 	}
 	rows.Close()
 
+	// 积分项适用孩子（0002）：无关联行 = 对所有孩子生效；有行 = 恰好这些孩子。
+	// 按 reward_item_id, child_id 排序，保证每个 ChildIDs 内 child_id 升序。
+	rows, err = dbs.Read.Query(
+		`SELECT ric.reward_item_id, ric.child_id
+		 FROM reward_item_children ric
+		 JOIN reward_items ri ON ri.id = ric.reward_item_id
+		 WHERE ri.family_id=? AND ri.active=1
+		 ORDER BY ric.reward_item_id, ric.child_id`, familyID)
+	if err != nil {
+		return fmt.Errorf("查家庭 %d 积分项适用孩子: %w", familyID, err)
+	}
+	childMap := map[int64][]int64{}
+	for rows.Next() {
+		var itemID, childID int64
+		if err := rows.Scan(&itemID, &childID); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan 积分项适用孩子: %w", err)
+		}
+		childMap[itemID] = append(childMap[itemID], childID)
+	}
+	rows.Close()
+	for i := range fc.Items {
+		fc.Items[i].ChildIDs = childMap[fc.Items[i].ID]
+	}
+
 	rows, err = dbs.Read.Query(
 		"SELECT id, name, emoji FROM prizes WHERE family_id=? AND active=1 ORDER BY sort, id", familyID)
 	if err != nil {
