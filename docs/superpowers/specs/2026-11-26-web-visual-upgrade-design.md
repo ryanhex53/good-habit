@@ -65,7 +65,7 @@
 - **daisyUI 5.8.2 的既定行为**（改样式前先看 `web/node_modules/daisyui/components/*.css`，文件是压缩过的单行，用 grep 取规则，不要整文件读取）：
   - 嵌套层的优先级是父层 > 子层：`daisyui.l1`（hover / active / focus）> `daisyui.l1.l2`（颜色变体、`[aria-pressed=true]`）> `daisyui.l1.l2.l3`（基础与 `btn-soft` / `btn-ghost` / `btn-outline`）。带 `aria-pressed="true"` 的 `.btn` 会被强制成实心"按下"外观；要保留柔和的选中态，必须用工具类覆盖 `bg-*` / `border-*` / `text-*`（工具类在所有 daisyUI 层之上）。
   - `btn-soft btn-primary` 的文字色是 `--color-primary`（浅色 3.4:1）→ 必须用 `text-brand-ink` 或把 `.btn-soft.btn-primary` 的 `--btn-rest-fg` 设为 `--color-brand-ink`。
-  - `.btn` 自带 `overflow: hidden` → 飘出的 "+N" 标签不能放在按钮里面，要放在包住按钮的定位容器里。
+  - 飘出的 "+N" 标签放在包住按钮的定位容器里，不放在按钮内部——标签是按钮的兄弟节点，不参与按钮的 flex 布局与禁用态样式（daisyUI 5.8.2 的 `.btn` 并不带 `overflow: hidden`，这样做是为了结构干净，不是被裁切逼的）。
   - `.menu` 的行是 `display: grid; align-content: flex-start` → 加了 `min-h-11` 后内容贴上沿，必须加 `content-center`。
   - `btn-sm` 是 12px 字 / 32px 高；`btn-lg` 是 18px 字 / 48px 高。项目的 `.btn { --fontsize: 1rem }` 会被尺寸变体覆盖。
   - `.collapse-content` 展开时自带 `padding-bottom: 1rem`；`.collapse-title` 右侧留了 3rem 给箭头。
