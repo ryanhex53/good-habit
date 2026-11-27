@@ -242,7 +242,7 @@
     @apply inline-flex h-6 items-center gap-1.5 rounded-full bg-base-200 px-2.5 text-xs font-medium whitespace-nowrap text-base-content/75;
   }
 
-  /* 浮动的 ±N：放在包住触发元素的定位容器里（.btn 会裁掉溢出内容） */
+  /* 浮动的 ±N：作为触发元素的兄弟节点放在包住它的定位容器里（不进按钮的 flex 布局与禁用态样式；.btn 本身并不裁切溢出） */
   .float-chip {
     @apply pointer-events-none absolute top-1 left-1/2 z-10 rounded-full bg-success px-2 py-0.5 text-sm font-semibold text-success-content;
     animation: var(--animate-float-up);
