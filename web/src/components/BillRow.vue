@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import { fmtTime, type LedgerRow } from '../types'
 
-const props = defineProps<{ row: LedgerRow }>()
+// showChild：家长端「全部孩子」视图下，在「当时」前标注孩子名字；孩子端只看自己，不传。
+const props = defineProps<{ row: LedgerRow; showChild?: boolean }>()
 
 const icon = computed(() =>
   props.row.kind === 'earn' ? '⭐' : props.row.kind === 'draw' ? '🎡' : '✏️',
@@ -34,7 +35,9 @@ const deltaClass: Record<string, string> = {
         <p class="text-lg font-semibold tabular-nums" :class="deltaClass[row.kind]">
           {{ row.delta > 0 ? '+' : '' }}{{ row.delta }}
         </p>
-        <p class="text-xs text-base-content/60">当时 {{ row.balanceAfter }}</p>
+        <p class="text-xs text-base-content/60">
+          <template v-if="showChild && row.childName">{{ row.childName + ' · ' }}</template>当时 {{ row.balanceAfter }}
+        </p>
       </div>
     </div>
   </div>

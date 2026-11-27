@@ -19,6 +19,7 @@ type ledgerRowT struct {
 	PrizeName    string `json:"prizeName"`
 	Mode         string `json:"mode"`
 	Note         string `json:"note"`
+	ChildName    string `json:"childName"`
 }
 
 func TestLedgerPagination(t *testing.T) {
@@ -122,6 +123,12 @@ func TestLedgerDisplayJoin(t *testing.T) {
 	if adjustRow == nil || adjustRow.Note != "测试调整" || adjustRow.Delta != -20 {
 		t.Errorf("adjust 行不符: %+v", adjustRow)
 	}
+	// 每种 kind 的行都带孩子名字（孩子自己查也一样）
+	for _, r := range []*ledgerRowT{drawRow, earnRow, adjustRow} {
+		if r != nil && r.ChildName != "娃" {
+			t.Errorf("%s 行 childName = %q, want 娃", r.Kind, r.ChildName)
+		}
+	}
 
 	// 家长带 childId 查询：能看到同样内容
 	rr = doJSON(h, "GET", fmt.Sprintf("/api/ledger?childId=%d", s.ChildID), nil, s.Parent)
@@ -131,6 +138,48 @@ func TestLedgerDisplayJoin(t *testing.T) {
 	json.Unmarshal(rr.Body.Bytes(), &parentPage)
 	if len(parentPage.Rows) != len(page.Rows) {
 		t.Errorf("家长按 childId 查 = %d 行, want %d", len(parentPage.Rows), len(page.Rows))
+	}
+}
+
+// 每行的 childName 必须来自该行自己的 child_id（JOIN 按行取），不是一个常量。
+func TestLedgerChildNamePerRow(t *testing.T) {
+	_, w, h, s := drawSetup(t, "ledgername") // 已有孩子「娃」的一笔 earn
+	it := mkItem(t, h, s.Parent, "小项", 1)
+	jia := mkChild(t, h, s.Parent, "ledgernamejia", "甲")
+	yi := mkChild(t, h, s.Parent, "ledgernameyi", "乙")
+	for _, c := range []childInfo{jia, yi} {
+		if rr := doJSON(h, "POST", "/api/earnings", map[string]any{
+			"childId": c.ID, "rewardItemId": it.ID,
+		}, s.Parent); rr.Code != 200 {
+			t.Fatalf("earn = %d %s", rr.Code, rr.Body.String())
+		}
+	}
+	if err := w.w.Stop(); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+
+	rr := doJSON(h, "GET", "/api/ledger", nil, s.Parent)
+	if rr.Code != 200 {
+		t.Fatalf("ledger = %d %s", rr.Code, rr.Body.String())
+	}
+	var page struct {
+		Rows []ledgerRowT `json:"rows"`
+	}
+	json.Unmarshal(rr.Body.Bytes(), &page)
+	if len(page.Rows) != 3 {
+		t.Fatalf("行数 = %d, want 3", len(page.Rows))
+	}
+	want := []string{"乙", "甲", "娃"} // id DESC：乙最后登记排最前
+	for i, name := range want {
+		if page.Rows[i].ChildName != name {
+			t.Errorf("rows[%d].childName = %q, want %q", i, page.Rows[i].ChildName, name)
+		}
+	}
+
+	rr = doJSON(h, "GET", fmt.Sprintf("/api/ledger?childId=%d", jia.ID), nil, s.Parent)
+	json.Unmarshal(rr.Body.Bytes(), &page)
+	if len(page.Rows) != 1 || page.Rows[0].ChildName != "甲" {
+		t.Errorf("按 childId=甲 查 = %+v, want 1 行且 childName=甲", page.Rows)
 	}
 }
 

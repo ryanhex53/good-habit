@@ -142,6 +142,7 @@ type ledgerRow struct {
 	PrizeName    string `json:"prizeName"`
 	Mode         string `json:"mode"`
 	Note         string `json:"note"`
+	ChildName    string `json:"childName"` // 家长端「全部孩子」视图里标注是哪个孩子
 }
 
 // GET /api/ledger：积分账单（child 自动限定自己；parent 可 ?childId= 查全家）。
@@ -188,13 +189,14 @@ func (s *server) handleLedger(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := `SELECT l.id, l.created_at, l.kind, l.delta, l.balance_after, COALESCE(l.note, ''),
-	       COALESCE(ri.title, ''), COALESCE(d.mode, ''), COALESCE(p.name, '')
+	       COALESCE(ri.title, ''), COALESCE(d.mode, ''), COALESCE(p.name, ''), COALESCE(u.display_name, '')
 	FROM ledger l
 	LEFT JOIN reward_items ri ON ri.id = l.ref_reward_item_id
 	LEFT JOIN draws d         ON d.id  = l.ref_draw_id
 	LEFT JOIN prizes p        ON p.id = CASE WHEN d.mode='single' THEN d.prize0_id
 	                                         WHEN d.picked=1    THEN d.prize1_id
 	                                         ELSE d.prize0_id END
+	LEFT JOIN users u         ON u.id = l.child_id
 	WHERE l.family_id = ? AND (? = 0 OR l.child_id = ?) AND (? = 0 OR l.id < ?)
 	ORDER BY l.id DESC LIMIT ?`
 	rows, err := s.deps.DBs.Read.Query(q, sess.FamilyID, childID, childID, before, before, limit+1)
@@ -207,7 +209,7 @@ func (s *server) handleLedger(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var v ledgerRow
 		if err := rows.Scan(&v.ID, &v.CreatedAt, &v.Kind, &v.Delta, &v.BalanceAfter,
-			&v.Note, &v.ItemTitle, &v.Mode, &v.PrizeName); err != nil {
+			&v.Note, &v.ItemTitle, &v.Mode, &v.PrizeName, &v.ChildName); err != nil {
 			writeInternal(w, r, err, "读账单失败")
 			return
 		}

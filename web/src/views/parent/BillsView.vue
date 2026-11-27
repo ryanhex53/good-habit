@@ -70,7 +70,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 
     <EmptyState v-if="rows.length === 0 && !loading" text="还没有账单记录" />
     <div class="flex flex-col gap-2 stagger">
-      <BillRow v-for="r in rows" :key="r.id" :row="r" />
+      <BillRow v-for="r in rows" :key="r.id" :row="r" :show-child="childId === 0" />
     </div>
     <ListStatus :loading="loading" :done="done && rows.length > 0" />
   </div>

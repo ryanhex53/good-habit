@@ -37,6 +37,7 @@ export interface LedgerRow {
   prizeName: string
   mode: string
   note: string
+  childName: string // 该行属于哪个孩子（家长端「全部孩子」时显示）
 }
 
 export interface LedgerPage {
