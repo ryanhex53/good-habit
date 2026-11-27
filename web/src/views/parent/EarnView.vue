@@ -2,12 +2,15 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, errMsg } from '../../api'
+import { useDialogs } from '../../composables/useDialogs'
 import { useToast } from '../../composables/useToast'
+import TickNumber from '../../components/TickNumber.vue'
 import FormField from '../../components/ui/FormField.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import type { ChildView, EntryResp, ItemView } from '../../types'
 
 const route = useRoute()
+const dialogs = useDialogs()
 
 const children = ref<ChildView[]>([])
 const items = ref<ItemView[]>([])
@@ -34,7 +37,16 @@ function flash(msg: string) {
   toastTimer = window.setTimeout(() => (toastVisible.value = false), 2200)
 }
 
-onBeforeUnmount(() => clearTimeout(toastTimer))
+// 登记确认：点积分项先弹确认框，确认后才发请求；confirming 防重入（连点只开一个弹窗）。
+// 成功后在刚点的积分项上方飘出 +N，750ms 后移除；减少动态效果时不飘。
+const confirming = ref(false)
+const float = ref<{ id: number; text: string } | null>(null)
+let floatTimer = 0
+
+onBeforeUnmount(() => {
+  clearTimeout(toastTimer)
+  clearTimeout(floatTimer)
+})
 
 async function load() {
   children.value = (await api<{ children: ChildView[] }>('GET', '/api/children')).children
@@ -47,21 +59,40 @@ async function load() {
 }
 
 async function earn(item: ItemView) {
+  if (confirming.value) return
   if (selected.value === null || toastVisible.value) return
-  error.value = ''
+  const child = children.value.find((c) => c.id === selected.value)
+  if (!child) return
+  confirming.value = true
   try {
-    const res = await api<EntryResp>('POST', '/api/earnings', {
-      childId: selected.value,
-      rewardItemId: item.id,
-      note: note.value || undefined,
+    const ok = await dialogs.confirm({
+      title: '登记得分',
+      message: `给 ${child.displayName} 记一笔「${item.title}」，+${item.points} 分。`,
+      confirmText: '登记',
     })
-    // 更新本地余额
-    const c = children.value.find((x) => x.id === selected.value)
-    if (c) c.balance = res.entry.balanceAfter
-    flash(`已记 ${res.entry.delta > 0 ? '+' : ''}${res.entry.delta} 分（当前 ${res.entry.balanceAfter} 分）`)
-    note.value = ''
-  } catch (e) {
-    error.value = errMsg(e)
+    if (!ok) return
+    error.value = ''
+    try {
+      const res = await api<EntryResp>('POST', '/api/earnings', {
+        childId: selected.value,
+        rewardItemId: item.id,
+        note: note.value || undefined,
+      })
+      // 更新本地余额
+      const c = children.value.find((x) => x.id === selected.value)
+      if (c) c.balance = res.entry.balanceAfter
+      flash(`已记 ${res.entry.delta > 0 ? '+' : ''}${res.entry.delta} 分（当前 ${res.entry.balanceAfter} 分）`)
+      note.value = ''
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        float.value = { id: item.id, text: '+' + item.points }
+        clearTimeout(floatTimer)
+        floatTimer = window.setTimeout(() => (float.value = null), 750)
+      }
+    } catch (e) {
+      error.value = errMsg(e)
+    }
+  } finally {
+    confirming.value = false
   }
 }
 
@@ -90,27 +121,36 @@ onMounted(load)
 <template>
   <!--
     手机（DOM 顺序）：给谁登记 → 积分项 → 手动调整（与原版一致）。
-    lg 起两栏：网格在左、选人在右上、手动调整在右下。
+    lg 起两栏：两张卡片（给谁登记、手动调整）在左 320px 列，积分项在右。
   -->
   <div>
     <PageHeader title="登记得分" />
     <div v-if="error" class="alert alert-error mb-4 py-2 text-sm" role="alert">{{ error }}</div>
 
-    <div class="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
-      <section class="lg:col-start-2 lg:row-start-1">
-        <div class="card border border-base-300 bg-base-100 shadow-sm">
-          <div class="card-body gap-3">
-            <h3 class="text-base font-bold">给谁登记</h3>
+    <div
+      class="mt-5 flex flex-col gap-6 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-x-8 lg:gap-y-6"
+    >
+      <section class="lg:col-start-1 lg:row-start-1">
+        <div class="surface p-5">
+          <div class="flex flex-col gap-3">
+            <h3 class="text-base font-semibold">给谁登记</h3>
             <div class="flex flex-wrap gap-2">
               <button
                 v-for="c in activeChildren"
                 :key="c.id"
+                type="button"
                 class="btn rounded-full max-lg:btn-lg"
-                :class="selected === c.id ? 'btn-primary' : 'btn-soft'"
+                :class="
+                  selected === c.id
+                    ? 'btn-primary border-primary/25 bg-primary/10 text-brand-ink hover:border-primary/25 hover:bg-primary/15 hover:text-brand-ink'
+                    : 'btn-soft'
+                "
                 :aria-pressed="selected === c.id"
                 @click="selected = c.id"
               >
-                {{ c.displayName }} · {{ c.balance }}分
+                <span class="font-medium">{{ c.displayName }}</span>
+                <TickNumber :value="c.balance" class="tabular-nums" />
+                <span class="text-xs">分</span>
               </button>
               <span v-if="activeChildren.length === 0" class="text-sm text-base-content/60">
                 先去「孩子」页添加孩子
@@ -128,50 +168,58 @@ onMounted(load)
         </div>
       </section>
 
-      <section class="min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+      <!-- 积分项：白底卡片，数字放大；点击先确认再登记 -->
+      <section class="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          <button
-            v-for="it in activeItems"
-            :key="it.id"
-            class="btn h-auto min-h-24 flex-col justify-center gap-1 border border-base-300 bg-base-100 py-4 shadow-sm max-lg:btn-lg"
-            :disabled="selected === null"
-            @click="earn(it)"
-          >
-            <span class="text-lg font-extrabold text-brand-ink tabular-nums">
-              +{{ it.points }} 分
-            </span>
-            <span class="max-w-full truncate text-sm font-normal">{{ it.title }}</span>
-          </button>
+          <span v-for="it in activeItems" :key="it.id" class="relative block">
+            <button
+              type="button"
+              class="btn h-auto min-h-24 w-full flex-col justify-center gap-1 rounded-2xl border-base-300 bg-base-100 px-3 py-4 hover:border-primary/40 active:scale-[0.97] max-lg:btn-lg"
+              :disabled="selected === null"
+              @click="earn(it)"
+            >
+              <span class="text-stat text-brand-ink">
+                +{{ it.points }}<span class="ml-1 text-sm font-medium">分</span>
+              </span>
+              <span class="w-full truncate text-sm font-normal text-base-content/75">{{ it.title }}</span>
+            </button>
+            <span v-if="float && float.id === it.id" class="float-chip" aria-hidden="true">{{ float.text }}</span>
+          </span>
         </div>
         <p v-if="activeItems.length === 0" class="py-8 text-center text-sm text-base-content/60">
           还没有积分项，先去「积分项」页添加
         </p>
       </section>
 
-      <section class="lg:col-start-2 lg:row-start-2">
-        <div class="card border border-base-300 bg-base-100 shadow-sm">
-          <div class="card-body gap-3">
-            <h3 class="text-base font-bold">手动调整</h3>
-            <div class="flex flex-col gap-2">
+      <section class="lg:col-start-1 lg:row-start-2">
+        <div class="surface p-5">
+          <h3 class="text-base font-semibold">手动调整</h3>
+          <div class="mt-3 flex flex-col gap-3">
+            <FormField label="分值" for-id="adj-delta">
               <input
+                id="adj-delta"
                 v-model.number="adjDelta"
                 type="number"
                 class="input w-full text-base max-lg:input-lg"
-                placeholder="±分值（如 -20 或 10）"
+                placeholder="扣分填负数，如 -20"
               />
+            </FormField>
+            <FormField label="原因" for-id="adj-note">
               <input
+                id="adj-note"
                 v-model="adjNote"
                 class="input w-full text-base max-lg:input-lg"
-                placeholder="原因（必填）"
+                placeholder="必填"
               />
-              <button
-                class="btn btn-primary max-lg:btn-lg"
-                :disabled="selected === null || !adjDelta || !adjNote"
-                @click="adjust"
-              >
-                调整
-              </button>
-            </div>
+            </FormField>
+            <button
+              type="button"
+              class="btn btn-outline max-lg:btn-lg"
+              :disabled="selected === null || !adjDelta || !adjNote"
+              @click="adjust"
+            >
+              调整
+            </button>
           </div>
         </div>
       </section>
