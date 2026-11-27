@@ -20,6 +20,7 @@ type ledgerRowT struct {
 	Mode         string `json:"mode"`
 	Note         string `json:"note"`
 	ChildName    string `json:"childName"`
+	Device       string `json:"device"`
 }
 
 func TestLedgerPagination(t *testing.T) {

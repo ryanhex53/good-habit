@@ -67,11 +67,12 @@ func (s *server) handleEarning(w http.ResponseWriter, r *http.Request) {
 	note := strings.TrimSpace(body.Note)
 	itemTitle := item.Title
 	itemID := item.ID
+	ua := requestUserAgent(r)
 	bal, apiErr := s.applyLedger(sess.FamilyID, body.ChildID, item.Points, func(balanceAfter int64, uuid string) ledger.Op {
 		return ledger.EarnOp{
 			UUID: uuid, FamilyID: sess.FamilyID, ChildID: body.ChildID,
 			RewardItemID: itemID, Delta: item.Points, BalanceAfter: balanceAfter,
-			Note: note, CreatedAt: time.Now().UnixMilli(),
+			Note: note, UserAgent: ua, CreatedAt: time.Now().UnixMilli(),
 		}
 	})
 	if apiErr != nil {
@@ -114,11 +115,12 @@ func (s *server) handleAdjustment(w http.ResponseWriter, r *http.Request) {
 
 	note := body.Note
 	delta := body.Delta
+	ua := requestUserAgent(r)
 	bal, apiErr := s.applyLedger(sess.FamilyID, body.ChildID, delta, func(balanceAfter int64, uuid string) ledger.Op {
 		return ledger.AdjustOp{
 			UUID: uuid, FamilyID: sess.FamilyID, ChildID: body.ChildID,
 			Delta: delta, BalanceAfter: balanceAfter,
-			Note: note, CreatedAt: time.Now().UnixMilli(),
+			Note: note, UserAgent: ua, CreatedAt: time.Now().UnixMilli(),
 		}
 	})
 	if apiErr != nil {

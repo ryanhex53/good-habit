@@ -97,23 +97,24 @@ func TestEarnOpApplies(t *testing.T) {
 
 	op := EarnOp{
 		UUID: "u-earn-1", FamilyID: f.familyID, ChildID: f.childID,
-		RewardItemID: f.itemID, Delta: 7, BalanceAfter: 7, CreatedAt: now,
+		RewardItemID: f.itemID, Delta: 7, BalanceAfter: 7, UserAgent: "ua-earn", CreatedAt: now,
 	}
 	if err := dbs.WithTx(op.Apply); err != nil {
 		t.Fatalf("EarnOp.Apply: %v", err)
 	}
 
-	var uuid, kind string
+	var uuid, kind, ua string
 	var delta, bal, refItem, createdAt int64
 	var note sql.NullString
 	err := dbs.Read.QueryRow(
-		"SELECT uuid, kind, delta, balance_after, ref_reward_item_id, note, created_at FROM ledger",
-	).Scan(&uuid, &kind, &delta, &bal, &refItem, &note, &createdAt)
+		"SELECT uuid, kind, delta, balance_after, ref_reward_item_id, note, user_agent, created_at FROM ledger WHERE uuid = ?",
+		"u-earn-1",
+	).Scan(&uuid, &kind, &delta, &bal, &refItem, &note, &ua, &createdAt)
 	if err != nil {
 		t.Fatalf("查 ledger: %v", err)
 	}
 	if uuid != "u-earn-1" || kind != "earn" || delta != 7 || bal != 7 ||
-		refItem != f.itemID || note.Valid || createdAt != now {
+		refItem != f.itemID || note.Valid || ua != "ua-earn" || createdAt != now {
 		t.Errorf("ledger 行不符: %+v", op)
 	}
 	var userBal int64
@@ -122,6 +123,66 @@ func TestEarnOpApplies(t *testing.T) {
 	}
 	if userBal != 7 {
 		t.Errorf("users.balance = %d, want 7", userBal)
+	}
+
+	// 空 UA 直接存空串（不能用 nullString：NOT NULL 列会让整个 op 失败）
+	op2 := EarnOp{UUID: "u-earn-2", FamilyID: f.familyID, ChildID: f.childID, RewardItemID: f.itemID, Delta: 1, BalanceAfter: 8, CreatedAt: now}
+	if err := dbs.WithTx(op2.Apply); err != nil {
+		t.Fatalf("EarnOp.Apply 空 UA: %v", err)
+	}
+	var ua2 string
+	if err := dbs.Read.QueryRow("SELECT user_agent FROM ledger WHERE uuid = 'u-earn-2'").Scan(&ua2); err != nil {
+		t.Fatalf("查空 UA 行: %v", err)
+	}
+	if ua2 != "" {
+		t.Errorf("空 UA 行 user_agent = %q, want 空串", ua2)
+	}
+}
+
+func TestAdjustOpApplies(t *testing.T) {
+	dbs := newDB(t)
+	f := seed(t, dbs)
+	now := int64(1730000003000)
+
+	op := AdjustOp{
+		UUID: "u-adj-1", FamilyID: f.familyID, ChildID: f.childID,
+		Delta: -3, BalanceAfter: -3, Note: "测试", UserAgent: "ua-adj", CreatedAt: now,
+	}
+	if err := dbs.WithTx(op.Apply); err != nil {
+		t.Fatalf("AdjustOp.Apply: %v", err)
+	}
+	var uuid, kind, ua string
+	var note sql.NullString
+	var delta, bal, createdAt int64
+	err := dbs.Read.QueryRow(
+		"SELECT uuid, kind, delta, balance_after, note, user_agent, created_at FROM ledger WHERE uuid = 'u-adj-1'",
+	).Scan(&uuid, &kind, &delta, &bal, &note, &ua, &createdAt)
+	if err != nil {
+		t.Fatalf("查 ledger: %v", err)
+	}
+	if uuid != "u-adj-1" || kind != "adjust" || delta != -3 || bal != -3 ||
+		note.String != "测试" || ua != "ua-adj" || createdAt != now {
+		t.Errorf("ledger 行不符: %+v", op)
+	}
+	var userBal int64
+	if err := dbs.Read.QueryRow("SELECT balance FROM users WHERE id=?", f.childID).Scan(&userBal); err != nil {
+		t.Fatalf("查 users: %v", err)
+	}
+	if userBal != -3 {
+		t.Errorf("users.balance = %d, want -3", userBal)
+	}
+
+	// 空 UA 直接存空串
+	op2 := AdjustOp{UUID: "u-adj-2", FamilyID: f.familyID, ChildID: f.childID, Delta: 1, BalanceAfter: -2, Note: "x", CreatedAt: now}
+	if err := dbs.WithTx(op2.Apply); err != nil {
+		t.Fatalf("AdjustOp.Apply 空 UA: %v", err)
+	}
+	var ua2 string
+	if err := dbs.Read.QueryRow("SELECT user_agent FROM ledger WHERE uuid = 'u-adj-2'").Scan(&ua2); err != nil {
+		t.Fatalf("查空 UA 行: %v", err)
+	}
+	if ua2 != "" {
+		t.Errorf("空 UA 行 user_agent = %q, want 空串", ua2)
 	}
 }
 

@@ -14,7 +14,7 @@ type Op interface {
 	Apply(tx *sql.Tx) error
 }
 
-// EarnOp：登记得分（kind=earn）。
+// EarnOp：登记得分（kind=earn）。UserAgent 为家长设备的原始 UA（空串 = 未记录）。
 type EarnOp struct {
 	UUID         string
 	FamilyID     int64
@@ -23,6 +23,7 @@ type EarnOp struct {
 	Delta        int64
 	BalanceAfter int64 // 入队时在 child.mu 内算好的快照
 	Note         string
+	UserAgent    string
 	CreatedAt    int64 // Unix 毫秒
 }
 
@@ -34,6 +35,7 @@ type AdjustOp struct {
 	Delta        int64
 	BalanceAfter int64
 	Note         string
+	UserAgent    string
 	CreatedAt    int64
 }
 
@@ -68,11 +70,12 @@ type SessionDeleteOp struct {
 }
 
 func (o EarnOp) Apply(tx *sql.Tx) error {
+	// user_agent 列 NOT NULL：直接传字符串（空串即可），不能用 nullString
 	_, err := tx.Exec(
-		`INSERT INTO ledger (uuid, family_id, child_id, delta, balance_after, kind, ref_reward_item_id, note, created_at)
-		 VALUES (?,?,?,?,?,'earn',?,?,?)`,
+		`INSERT INTO ledger (uuid, family_id, child_id, delta, balance_after, kind, ref_reward_item_id, note, user_agent, created_at)
+		 VALUES (?,?,?,?,?,'earn',?,?,?,?)`,
 		o.UUID, o.FamilyID, o.ChildID, o.Delta, o.BalanceAfter,
-		nullInt64(o.RewardItemID), nullString(o.Note), o.CreatedAt,
+		nullInt64(o.RewardItemID), nullString(o.Note), o.UserAgent, o.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("earn 插入 ledger: %w", err)
@@ -82,9 +85,9 @@ func (o EarnOp) Apply(tx *sql.Tx) error {
 
 func (o AdjustOp) Apply(tx *sql.Tx) error {
 	_, err := tx.Exec(
-		`INSERT INTO ledger (uuid, family_id, child_id, delta, balance_after, kind, note, created_at)
-		 VALUES (?,?,?,?,?,'adjust',?,?)`,
-		o.UUID, o.FamilyID, o.ChildID, o.Delta, o.BalanceAfter, nullString(o.Note), o.CreatedAt,
+		`INSERT INTO ledger (uuid, family_id, child_id, delta, balance_after, kind, note, user_agent, created_at)
+		 VALUES (?,?,?,?,?,'adjust',?,?,?)`,
+		o.UUID, o.FamilyID, o.ChildID, o.Delta, o.BalanceAfter, nullString(o.Note), o.UserAgent, o.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("adjust 插入 ledger: %w", err)

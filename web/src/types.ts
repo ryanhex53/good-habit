@@ -38,6 +38,7 @@ export interface LedgerRow {
   mode: string
   note: string
   childName: string // 该行属于哪个孩子（家长端「全部孩子」时显示）
+  device: string // 登记时家长设备的短标签（UA 解析），历史行为空串
 }
 
 export interface LedgerPage {

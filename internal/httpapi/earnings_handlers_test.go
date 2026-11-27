@@ -3,6 +3,7 @@ package httpapi
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -387,5 +388,122 @@ func TestEarnScopeSurvivesChildReactivation(t *testing.T) {
 	}
 	if got := earn(b.ID, touched.ID); got != 422 {
 		t.Errorf("保存过的项：乙恢复后不应生效 = %d, want 422", got)
+	}
+}
+
+// doJSONUA 同 doJSON，但带自定义 User-Agent 头（验证设备记录）。
+func doJSONUA(h http.Handler, method, path, ua string, body any, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+	var rdr *bytes.Reader
+	if body != nil {
+		rdr = jsonReader(body)
+	} else {
+		rdr = bytes.NewReader(nil)
+	}
+	req := httptest.NewRequest(method, path, rdr)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", ua)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	return rr
+}
+
+const (
+	uaIPhone = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+	uaHuawei = "Mozilla/5.0 (Linux; Android 12; ALN-AL00 Build/HUAWEIALN-AL00; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 MicroMessenger/8.0.47.2560(0x28003036) WeChat/arm64 Weixin"
+)
+
+// 登记得分：请求的 User-Agent 原样落库（无头 → 空串），账单只暴露解析后的 device，不外露原文。
+func TestEarnRecordsUserAgent(t *testing.T) {
+	deps, w := newDepsWithWriter(t)
+	h := New(deps)
+	p := regParent(t, deps.Auth, "uaearn")
+	pc := parentCookie(p.Token)
+	it := mkItem(t, h, pc, "UA项", 3)
+	c := mkChild(t, h, pc, "uaearnkid", "娃")
+
+	if rr := doJSONUA(h, "POST", "/api/earnings", uaIPhone, map[string]any{
+		"childId": c.ID, "rewardItemId": it.ID,
+	}, pc); rr.Code != 200 {
+		t.Fatalf("earn(带 UA) = %d %s", rr.Code, rr.Body.String())
+	}
+	if rr := doJSON(h, "POST", "/api/earnings", map[string]any{
+		"childId": c.ID, "rewardItemId": it.ID,
+	}, pc); rr.Code != 200 {
+		t.Fatalf("earn(无 UA) = %d %s", rr.Code, rr.Body.String())
+	}
+	if err := w.Stop(); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+
+	rows, err := deps.DBs.Read.Query("SELECT user_agent FROM ledger WHERE child_id = ? ORDER BY id", c.ID)
+	if err != nil {
+		t.Fatalf("查 ledger: %v", err)
+	}
+	defer rows.Close()
+	var got []string
+	for rows.Next() {
+		var ua string
+		if err := rows.Scan(&ua); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		got = append(got, ua)
+	}
+	if len(got) != 2 || got[0] != uaIPhone || got[1] != "" {
+		t.Errorf("落库 user_agent = %q, want [原文, \"\"]", got)
+	}
+
+	rr := doJSON(h, "GET", fmt.Sprintf("/api/ledger?childId=%d", c.ID), nil, pc)
+	var page struct {
+		Rows []ledgerRowT `json:"rows"`
+	}
+	json.Unmarshal(rr.Body.Bytes(), &page)
+	if len(page.Rows) != 2 { // id DESC：无 UA 的那笔在后
+		t.Fatalf("账单行数 = %d, want 2", len(page.Rows))
+	}
+	if page.Rows[0].Device != "" || page.Rows[1].Device != "iPhone iOS 17.5" {
+		t.Errorf("device = [%q, %q], want [\"\", \"iPhone iOS 17.5\"]", page.Rows[0].Device, page.Rows[1].Device)
+	}
+	if page.Rows[1].ChildName != "娃" {
+		t.Errorf("childName = %q, want 娃", page.Rows[1].ChildName)
+	}
+	if bytes.Contains(rr.Body.Bytes(), []byte("Mozilla/5.0")) {
+		t.Errorf("账单响应不应外露原始 UA: %s", rr.Body.String())
+	}
+}
+
+// 手动调整同样记录设备。
+func TestAdjustRecordsUserAgent(t *testing.T) {
+	deps, w := newDepsWithWriter(t)
+	h := New(deps)
+	p := regParent(t, deps.Auth, "uaadj")
+	pc := parentCookie(p.Token)
+	c := mkChild(t, h, pc, "uaadjkid", "娃")
+
+	if rr := doJSONUA(h, "POST", "/api/adjustments", uaHuawei, map[string]any{
+		"childId": c.ID, "delta": 5, "note": "UA 测试",
+	}, pc); rr.Code != 200 {
+		t.Fatalf("adjust(带 UA) = %d %s", rr.Code, rr.Body.String())
+	}
+	if err := w.Stop(); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+
+	var ua string
+	if err := deps.DBs.Read.QueryRow("SELECT user_agent FROM ledger WHERE child_id = ?", c.ID).Scan(&ua); err != nil {
+		t.Fatalf("查 ledger: %v", err)
+	}
+	if ua != uaHuawei {
+		t.Errorf("落库 user_agent = %q, want 原文", ua)
+	}
+	rr := doJSON(h, "GET", "/api/ledger", nil, pc)
+	var page struct {
+		Rows []ledgerRowT `json:"rows"`
+	}
+	json.Unmarshal(rr.Body.Bytes(), &page)
+	if len(page.Rows) != 1 || page.Rows[0].Kind != "adjust" || page.Rows[0].Device != "ALN-AL00 Android 12" {
+		t.Errorf("账单 = %+v, want 1 行 adjust 且 device=ALN-AL00 Android 12", page.Rows)
 	}
 }

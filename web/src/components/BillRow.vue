@@ -29,7 +29,9 @@ const deltaClass: Record<string, string> = {
       <span class="shrink-0 text-xl">{{ icon }}</span>
       <div class="min-w-0 flex-1">
         <p class="truncate text-base font-medium">{{ reason }}</p>
-        <p class="text-xs text-base-content/60">{{ fmtTime(row.createdAt) }}</p>
+        <p class="text-xs text-base-content/60">
+          {{ fmtTime(row.createdAt) }}<template v-if="row.device">{{ ' · ' + row.device }}</template>
+        </p>
       </div>
       <div class="shrink-0 text-right">
         <p class="text-lg font-semibold tabular-nums" :class="deltaClass[row.kind]">
