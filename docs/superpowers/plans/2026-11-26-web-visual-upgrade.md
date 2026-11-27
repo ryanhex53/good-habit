@@ -572,7 +572,7 @@ for path, name in [('/parent/children', 'children'), ('/parent/items', 'items'),
     check(name + ': cards have no shadow', js("[...document.querySelectorAll('main .surface')].every(e => getComputedStyle(e).boxShadow === 'none')"))
     check(name + ': section titles 600', js("[...document.querySelectorAll('main h3')].every(e => getComputedStyle(e).fontWeight === '600')"))
 go('/parent/children', 'light')
-check('row action buttons 14px on desktop', js("[...document.querySelectorAll('main .surface button.btn')].length >= 3 && [...document.querySelectorAll('main .surface button.btn')].every(e => getComputedStyle(e).fontSize === '14px')"))
+check('row action buttons 14px on desktop', js("[...document.querySelectorAll('main .surface .btn-ghost')].length >= 3 && [...document.querySelectorAll('main .surface .btn-ghost')].every(e => getComputedStyle(e).fontSize === '14px')"))   # 只量行内操作按钮（规范定义为 btn-ghost）；表单主按钮保持 daisyUI 默认 16px，与总览 / 登记页一致
 vp(390, 844, 2, True)
 for path, name, extra in [('/parent/children', 'children', 'main .surface .btn-primary'), ('/parent/items', 'items', 'main .join .btn'), ('/parent/prizes', 'prizes', 'main .join .btn')]:
     go(path, 'light')
