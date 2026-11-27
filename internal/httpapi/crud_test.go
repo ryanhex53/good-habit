@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"good-habit/internal/auth"
@@ -18,11 +19,12 @@ func regParent(t *testing.T, svc *auth.Service, username string) store.Session {
 }
 
 type itemResp struct {
-	ID     int64  `json:"id"`
-	Title  string `json:"title"`
-	Points int64  `json:"points"`
-	Active bool   `json:"active"`
-	Sort   int64  `json:"sort"`
+	ID       int64   `json:"id"`
+	Title    string  `json:"title"`
+	Points   int64   `json:"points"`
+	Active   bool    `json:"active"`
+	Sort     int64   `json:"sort"`
+	ChildIDs []int64 `json:"childIds"`
 }
 
 func TestRewardItemCRUD(t *testing.T) {
@@ -39,8 +41,8 @@ func TestRewardItemCRUD(t *testing.T) {
 	}
 	var item itemResp
 	json.Unmarshal(rr.Body.Bytes(), &item)
-	if item.ID == 0 || item.Title != "托管课写完作业" || item.Points != 7 || !item.Active {
-		t.Errorf("create 响应不符: %+v", item)
+	if item.ID == 0 || item.Title != "托管课写完作业" || item.Points != 7 || !item.Active || item.ChildIDs == nil {
+		t.Errorf("create 响应不符: %+v, childIds 应为 []", item)
 	}
 
 	// 改分值 + 排序
@@ -78,6 +80,132 @@ func TestRewardItemCRUD(t *testing.T) {
 	rr = doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{"active": true}, pc)
 	if rr.Code != 200 {
 		t.Fatalf("恢复 = %d", rr.Code)
+	}
+}
+
+// mkScopedItem 建一个指定孩子的积分项（不传 childIDs 即所有孩子）。
+func mkScopedItem(t *testing.T, h http.Handler, pc *http.Cookie, title string, points int64, childIDs ...int64) itemInfo {
+	t.Helper()
+	rr := doJSON(h, "POST", "/api/reward-items", map[string]any{
+		"title": title, "points": points, "childIds": childIDs,
+	}, pc)
+	if rr.Code != 200 {
+		t.Fatalf("建指定范围积分项 = %d %s", rr.Code, rr.Body.String())
+	}
+	var it itemInfo
+	json.Unmarshal(rr.Body.Bytes(), &it)
+	return it
+}
+
+func TestRewardItemChildScope(t *testing.T) {
+	deps, svc := newDeps(t)
+	h := New(deps)
+	p := regParent(t, svc, "scope01")
+	pc := parentCookie(p.Token)
+	a := mkChild(t, h, pc, "scope01a", "甲")
+	b := mkChild(t, h, pc, "scope01b", "乙")
+
+	var item itemResp
+	// 省略 childIds → 非 nil 空切片（JSON 里是 []，不是 null）
+	rr := doJSON(h, "POST", "/api/reward-items", map[string]any{"title": "默认", "points": 5}, pc)
+	json.Unmarshal(rr.Body.Bytes(), &item)
+	if item.ChildIDs == nil || len(item.ChildIDs) != 0 {
+		t.Fatalf("省略 childIds: %#v, want 非-nil 空切片", item.ChildIDs)
+	}
+
+	// 指定给甲
+	rr = doJSON(h, "POST", "/api/reward-items", map[string]any{
+		"title": "练琴", "points": 5, "childIds": []int64{a.ID},
+	}, pc)
+	if rr.Code != 200 {
+		t.Fatalf("create = %d %s", rr.Code, rr.Body.String())
+	}
+	json.Unmarshal(rr.Body.Bytes(), &item)
+	if len(item.ChildIDs) != 1 || item.ChildIDs[0] != a.ID {
+		t.Fatalf("create childIds = %v, want [%d]", item.ChildIDs, a.ID)
+	}
+
+	list := func() []itemResp {
+		rr := doJSON(h, "GET", "/api/reward-items", nil, pc)
+		var l struct {
+			Items []itemResp `json:"items"`
+		}
+		json.Unmarshal(rr.Body.Bytes(), &l)
+		return l.Items
+	}
+	byID := func(id int64) itemResp {
+		for _, it := range list() {
+			if it.ID == id {
+				return it
+			}
+		}
+		t.Fatalf("列表里没有项 %d", id)
+		return itemResp{}
+	}
+	if got := byID(item.ID).ChildIDs; len(got) != 1 || got[0] != a.ID {
+		t.Errorf("列表 childIds = %v, want [%d]", got, a.ID)
+	}
+
+	// PATCH 省略 / null → 不动
+	rr = doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{"points": 8}, pc)
+	json.Unmarshal(rr.Body.Bytes(), &item)
+	if item.Points != 8 || len(item.ChildIDs) != 1 || item.ChildIDs[0] != a.ID {
+		t.Errorf("省略 childIds 的 PATCH 不应改范围: %+v", item)
+	}
+	rr = doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{"childIds": nil}, pc)
+	json.Unmarshal(rr.Body.Bytes(), &item)
+	if rr.Code != 200 || len(item.ChildIDs) != 1 || item.ChildIDs[0] != a.ID {
+		t.Errorf("childIds:null 应视为未传: code=%d %+v", rr.Code, item)
+	}
+
+	// 重复 id 去重
+	rr = doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{
+		"childIds": []int64{a.ID, b.ID, a.ID},
+	}, pc)
+	json.Unmarshal(rr.Body.Bytes(), &item)
+	if len(item.ChildIDs) != 2 || item.ChildIDs[0] != a.ID || item.ChildIDs[1] != b.ID {
+		t.Errorf("去重后 childIds = %v, want [%d %d]", item.ChildIDs, a.ID, b.ID)
+	}
+
+	// 非法 id → 422 child_not_found，且不半写
+	other := regParent(t, svc, "scope01x")
+	oc := mkChild(t, h, parentCookie(other.Token), "scope01xc", "丙")
+	off := mkChild(t, h, pc, "scope01d", "丁")
+	doJSON(h, "PATCH", apiPath("children", off.ID), map[string]any{"active": false}, pc)
+	for name, bad := range map[string][]int64{
+		"他家孩子": {oc.ID}, "家长本人": {p.UserID}, "不存在": {999999}, "已停用": {off.ID, a.ID},
+	} {
+		rr = doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{"childIds": bad}, pc)
+		if rr.Code != 422 || errCode(t, rr) != "child_not_found" {
+			t.Errorf("%s: = %d %s, want 422 child_not_found", name, rr.Code, rr.Body.String())
+		}
+	}
+	if got := byID(item.ID).ChildIDs; len(got) != 2 {
+		t.Errorf("非法 PATCH 后范围被改了: %v", got)
+	}
+	if rr := doJSON(h, "POST", "/api/reward-items", map[string]any{
+		"title": "坏", "points": 1, "childIds": []int64{999999},
+	}, pc); rr.Code != 422 || errCode(t, rr) != "child_not_found" {
+		t.Errorf("create 非法 childIds = %d %s, want 422 child_not_found", rr.Code, rr.Body.String())
+	}
+
+	// 跨家庭：B 家长带 childIds PATCH A 家的项 → 404
+	if rr := doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{"childIds": []int64{}}, parentCookie(other.Token)); rr.Code != 404 {
+		t.Errorf("跨家庭 PATCH = %d, want 404", rr.Code)
+	}
+
+	// 软删除后列表仍带 childIds
+	doJSON(h, "DELETE", apiPath("reward-items", item.ID), nil, pc)
+	if got := byID(item.ID); got.Active || len(got.ChildIDs) != 2 {
+		t.Errorf("软删除后列表项不符: %+v", got)
+	}
+
+	// [] → 所有孩子
+	doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{"active": true}, pc)
+	rr = doJSON(h, "PATCH", apiPath("reward-items", item.ID), map[string]any{"childIds": []int64{}}, pc)
+	json.Unmarshal(rr.Body.Bytes(), &item)
+	if rr.Code != 200 || item.ChildIDs == nil || len(item.ChildIDs) != 0 {
+		t.Errorf("childIds:[] 应改为所有孩子（非-nil 空切片）: code=%d %#v", rr.Code, item.ChildIDs)
 	}
 }
 
