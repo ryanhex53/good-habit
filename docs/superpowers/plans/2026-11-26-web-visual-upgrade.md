@@ -6,7 +6,7 @@
 
 **Architecture:** 纯前端改动。刻度集中在 `web/src/styles/app.css`（daisyUI 主题变量 + Tailwind `@theme` token + 少量组件类），页面与组件只改模板里的类名和少量标记；新增一个 `TickNumber` 组件承担"积分数字会动"；唯一的行为变更是登记得分先确认。不新增依赖、不新增接口、不引入测试框架。
 
-**Tech Stack:** Vue 3.5（`<script setup lang="ts">`）、vue-router 4、Tailwind CSS 4.3、daisyUI 5.8；验证用 `npm run build`、Go 二进制托管产物、本机 `browser-use` CLI。
+**Tech Stack:** Vue 3.5（`<script setup lang="ts">`）、vue-router 4、Tailwind CSS 4.3、daisyUI 5.8；验证用 `npm run build`、Go 二进制托管产物、本机 `browser-use` CLI。（**迁移注记 2026-11-27**：browser-use 已卸载，现改用 chrome-devtools MCP，方法见 `.superpowers/verify/README.md`。）
 
 **Spec:** `docs/superpowers/specs/2026-11-26-web-visual-upgrade-design.md`（下文简称"设计文档"；执行每个任务前必须读它标注的小节）。参考标记（已获用户确认的效果图，一次性产物，不入库）：`.superpowers/mockup-kit/pages/{kid-home,parent-overview,parent-earn}.html` 与 `.superpowers/mockup-kit/mock.source.css`。
 
@@ -32,7 +32,7 @@
 - **不要运行 `build.sh` / `build.ps1`**，不要运行 `npm ci`（依赖已装好），不要启动 vite dev server。
 - **8080 端口是用户自己的 nginx**，绝不能占用或结束；验证一律用 `127.0.0.1:18080`。
 - **仓库根目录的 `good-habit.db` 是用户的开发库**，不要打开、复制、删除或拿来登录。
-- **浏览器**：`browser-use` 连的是用户正在使用的真实 Chrome，里面有用户的工作标签页。只新开一个标签页（`base.py` 已这样做）、用完关掉；不要调用 `activate_tab`（会把用户的浏览器切到前台）。Chrome 窗口被遮挡时 `requestAnimationFrame` 与定时器会被节流——判断"已加载"用 `wait_for(...)` 轮询，不用固定 `sleep`。
+- **浏览器**：`browser-use` 连的是用户正在使用的真实 Chrome，里面有用户的工作标签页。只新开一个标签页（`base.py` 已这样做）、用完关掉；不要调用 `activate_tab`（会把用户的浏览器切到前台）。Chrome 窗口被遮挡时 `requestAnimationFrame` 与定时器会被节流——判断"已加载"用 `wait_for(...)` 轮询，不用固定 `sleep`。（**迁移注记 2026-11-27**：browser-use 已卸载，现改用 chrome-devtools MCP，方法见 `.superpowers/verify/README.md`。）
 - **接口限速**：`/api/auth/*` 每个 IP 每分钟 10 次。一个验证服务实例上，检查脚本不要连续运行超过 3 次（每次会新建并登录 2 个临时孩子）；超过了就重启服务再跑。
 - **写文件**：仓库内的文件用 Write / Edit 工具；PowerShell 不要用 `-ExecutionPolicy Bypass`。
 
@@ -43,7 +43,7 @@
 - [ ] **开工检查**：`git status --short` 为空（只剩本任务要改的文件之前的状态）；`netstat -ano | grep ':18080'` 无监听。
 - [ ] **起服务（改之前，不重新构建）**：作为后台任务运行 `bash $VERIFY/serve.sh D:/Ryan/Code/good-habit/.claude/worktrees/feat-web-visual-upgrade 18080 /tmp/gh-verify nobuild`；`curl -s http://127.0.0.1:18080/healthz` 返回 `ok` 后，`node $VERIFY/seed.mjs http://127.0.0.1:18080 C:/Users/Ryan/AppData/Local/Temp/gh-verify`，再 `mkdir -p /tmp/gh-verify/shots`。
 - [ ] **写检查**：`cp $VERIFY/base.py $VERIFY/check.py`，Read 一次，再用 Edit 把本任务"检查"一节的代码粘到 `# <<< 断言结束` 的上一行。
-- [ ] **跑出红**：`SHOTS="C:/Users/Ryan/AppData/Local/Temp/gh-verify/shots" SESS="C:/Users/Ryan/AppData/Local/Temp/gh-verify/sessions.json" browser-use < $VERIFY/check.py`。本任务的断言此时应当失败（现有页面还没改）；把 `RESULT:` 行记下来。
+- [ ] **跑出红**：`SHOTS="C:/Users/Ryan/AppData/Local/Temp/gh-verify/shots" SESS="C:/Users/Ryan/AppData/Local/Temp/gh-verify/sessions.json" browser-use < $VERIFY/check.py`。本任务的断言此时应当失败（现有页面还没改）；把 `RESULT:` 行记下来。（**迁移注记 2026-11-27**：browser-use 已卸载，现用 chrome-devtools MCP 执行断言清单，方法见 `.superpowers/verify/README.md`。）
 - [ ] **实现**：按"要做的事"修改代码。
 - [ ] **重建并重启服务**：TaskStop 结束 serve.sh 的后台任务 → `bash $VERIFY/stop.sh 18080` → 作为后台任务运行同一条 serve.sh 命令但把 `nobuild` 换成 `build` → `healthz` → `seed.mjs`（库是新的，要重新造数据）。
 - [ ] **跑出绿**：再运行一次检查，最后一行必须是 `RESULT: PASS (n passed, 0 failed)`；然后用 Read 工具逐张查看本任务截的图（路径 `C:/Users/Ryan/AppData/Local/Temp/gh-verify/shots/<名字>.png`），确认与效果图一致、没有错位或溢出。断言通过但截图不对，同样算没完成。

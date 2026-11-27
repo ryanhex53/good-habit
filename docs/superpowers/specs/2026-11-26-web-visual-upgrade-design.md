@@ -285,7 +285,7 @@
 每个任务完成后必须给出以下证据，不能只说"已完成"：
 
 1. `cd web && npm run build` 退出码为 0（含 `vue-tsc` 类型检查）。
-2. 浏览器脚本化核对（用本机的 `browser-use` CLI，方法见附录 C）：对改动涉及的页面，在 390×844（DPR 2）与 1280×820 两个视口、浅色与深色两个主题下各截一张图，并**实际查看截图**。至少核对：
+2. 浏览器脚本化核对（当时用本机的 `browser-use` CLI；**迁移注记 2026-11-27**：browser-use 已卸载，现改用 chrome-devtools MCP，方法见 `.superpowers/verify/README.md`）：对改动涉及的页面，在 390×844（DPR 2）与 1280×820 两个视口、浅色与深色两个主题下各截一张图，并**实际查看截图**。至少核对：
    - 没有 `font-extrabold` 残留：`grep -rn "font-extrabold" web/src` 无结果。
    - 360px 宽度下 `document.documentElement.scrollWidth <= 360`。
    - 本轮新写或改写的控件在 390px 宽度下 `getBoundingClientRect()` 的高与宽都 ≥ 44。
@@ -335,7 +335,7 @@ builder check 之后由作者定案、用户可在审阅时否决的各点：
 - **Go 工具链**：`C:/Users/Ryan/sdk/go1.27.4/bin/go.exe`（PATH 上的 `go` 是 1.20，太旧）。
 - **不要运行 `build.sh` / `build.ps1`**（它们会先 `npm ci`，如果此时有 vite dev server 在运行，会把 `web/node_modules` 删成半残）。前端验证用 `npm run build` + Go 二进制直接托管产物，不启 vite dev server；如果确实需要 dev server，用完必须停掉，并确认端口已释放。
 - **登录失败 5 次会锁账号 10 分钟**：验证数据一律通过接口新建（注册家长 → 建孩子 → 建积分项 / 奖品 → 登记几笔），不要对未知密码的账号反复尝试。
-- **浏览器**：`browser-use` 连接的是用户正在使用的真实 Chrome，里面开着用户的工作标签页。只新建并操作自己的一个标签页，用完关掉；`Emulation.setDeviceMetricsOverride` 用完必须清除；`localStorage` 只能在应用自己的源上设置；Chrome 窗口被遮挡时动画帧会暂停，不要依赖 `requestAnimationFrame` 来判断"已加载"。
+- **浏览器**：`browser-use` 连接的是用户正在使用的真实 Chrome，里面开着用户的工作标签页。只新建并操作自己的一个标签页，用完关掉；`Emulation.setDeviceMetricsOverride` 用完必须清除；`localStorage` 只能在应用自己的源上设置；Chrome 窗口被遮挡时动画帧会暂停，不要依赖 `requestAnimationFrame` 来判断"已加载"。（**迁移注记 2026-11-27**：browser-use 已卸载，现改用 chrome-devtools MCP，方法见 `.superpowers/verify/README.md`。）
 - **PowerShell**：不要用 `-ExecutionPolicy Bypass` 运行脚本（会被权限策略拒绝），需要时用 `powershell -NoProfile -Command "…"` 的单行内联命令。
 - Bash 工具里不要用 heredoc 往仓库里写文件，用文件写入工具。
 

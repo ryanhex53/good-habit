@@ -31,7 +31,7 @@
 - **不要运行 `build.sh` / `build.ps1`、`npm ci`**；不要启动 vite dev server。
 - **8080 是用户自己的 nginx**，绝不能占用或结束；验证一律用 `127.0.0.1:18080`。**仓库根目录的 `good-habit.db` 是用户的开发库**，不要碰。
 - `VERIFY=D:/Ryan/Code/good-habit/.superpowers/verify`（主检出里的验证工具，不入库；用法见其 README）。
-- **browser-use 连的是用户正在用的真实 Chrome**：只新开一个标签页、用完关掉（`base.py` 已这样做）；不要 `activate_tab`；给它长超时，绝不中途杀掉；出现 "Allow remote debugging?" 就停下来请用户点允许。
+- **browser-use 连的是用户正在用的真实 Chrome**：只新开一个标签页、用完关掉（`base.py` 已这样做）；不要 `activate_tab`；给它长超时，绝不中途杀掉；出现 "Allow remote debugging?" 就停下来请用户点允许。（**迁移注记 2026-11-27**：browser-use 已卸载，现改用 chrome-devtools MCP，方法见 `.superpowers/verify/README.md`。）
 - `/api/auth/*` 每个 IP 每分钟 10 次：检查脚本里的注册 / 登录次数要少。
 - **提交**：`<type>(<scope>): <中文标题>`，正文一句话，末尾一行 `Co-Authored-By: Claude Code <noreply@anthropic.com>`；只 `git add` 本任务列出的文件；不推送、不合并、不改 `main`。
 
@@ -40,7 +40,7 @@
 - [ ] **开工检查**：`git status --short` 为空；`netstat -ano | grep ':18080'` 无监听。
 - [ ] **起服务**：作为后台任务运行 `bash $VERIFY/serve.sh "$WT" 18080 /tmp/gh-verify build`；`curl -s http://127.0.0.1:18080/healthz` 返回 `ok` 后，`node $VERIFY/seed.mjs http://127.0.0.1:18080 /tmp/gh-verify`，再 `mkdir -p /tmp/gh-verify/shots`。种子家庭：家长 `parent`，孩子 **小明**、**小雨**（会话在 `sessions.json` 的 `parent` / `ming` / `yu`），11 个所有孩子模式的积分项。
 - [ ] **写检查**：`cp $VERIFY/base.py $VERIFY/check.py`，Read 一次，再用 Edit 把本任务的断言粘到 `# <<< 断言结束` 的上一行。
-- [ ] **跑出红**：`SHOTS="C:/Users/Ryan/AppData/Local/Temp/gh-verify/shots" SESS="C:/Users/Ryan/AppData/Local/Temp/gh-verify/sessions.json" browser-use < $VERIFY/check.py`。新断言此时应当失败；记下 `RESULT:` 行。
+- [ ] **跑出红**：`SHOTS="C:/Users/Ryan/AppData/Local/Temp/gh-verify/shots" SESS="C:/Users/Ryan/AppData/Local/Temp/gh-verify/sessions.json" browser-use < $VERIFY/check.py`。新断言此时应当失败；记下 `RESULT:` 行。（**迁移注记 2026-11-27**：browser-use 已卸载，现用 chrome-devtools MCP 执行断言清单，方法见 `.superpowers/verify/README.md`。）
 - [ ] **实现**：按任务里"要做的事"改代码。
 - [ ] **重建重启**：TaskStop 结束 serve.sh 的后台任务 → `bash $VERIFY/stop.sh 18080` → `rm -f /tmp/gh-verify/preview.db*`（换一个空库，否则 seed 会因账号已存在而失败）→ 同一条 serve.sh 命令（`build`）→ `healthz` → `seed.mjs`。
 - [ ] **跑出绿**：再跑一次检查，最后一行必须是 `RESULT: PASS (n passed, 0 failed)`；然后用 Read 逐张查看本任务截的图（`C:/Users/Ryan/AppData/Local/Temp/gh-verify/shots/<名字>.png`）。断言通过但截图不对，同样算没完成。
@@ -712,7 +712,7 @@
 
 - [ ] **Step 5: 重建重启、跑出绿、看截图**（按"固定流程"）
 
-  Run: 同一条 `browser-use < $VERIFY/check.py`
+  Run: 同一条 `browser-use < $VERIFY/check.py`（**迁移注记 2026-11-27**：browser-use 已卸载，现用 chrome-devtools MCP 执行本 flow 的断言清单，见 `.superpowers/verify/README.md` §5）
   Expected: `RESULT: PASS`；截图里 chip 排在添加栏下方、选中态与登记页一致，长名字那行标签单行省略，单孩家庭页面与现在完全一致。
 
 - [ ] **Step 6: Commit**
@@ -821,7 +821,7 @@
 
 - [ ] **Step 4: 重建重启、跑出绿、看截图**（按"固定流程"）
 
-  Run: 同一条 `browser-use < $VERIFY/check.py`
+  Run: 同一条 `browser-use < $VERIFY/check.py`（**迁移注记 2026-11-27**：browser-use 已卸载，现用 chrome-devtools MCP 执行本 flow 的断言清单，见 `.superpowers/verify/README.md` §5）
   Expected: `RESULT: PASS`；截图里弹窗是底部 / 居中 modal，chip 排与添加栏同款，孤儿项那行标签带"（已停用）"。
 
 - [ ] **Step 5: Commit**
@@ -888,7 +888,7 @@
 
 - [ ] **Step 3: 重建重启、跑出绿、看截图**（按"固定流程"）
 
-  Run: 同一条 `browser-use < $VERIFY/check.py`
+  Run: 同一条 `browser-use < $VERIFY/check.py`（**迁移注记 2026-11-27**：browser-use 已卸载，现用 chrome-devtools MCP 执行本 flow 的断言清单，见 `.superpowers/verify/README.md` §5）
   Expected: `RESULT: PASS`；截图里切到小雨后右侧格子只含小雨可记的项，空状态文案带「小明」。
 
 - [ ] **Step 4: Commit**
