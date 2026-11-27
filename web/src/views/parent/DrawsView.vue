@@ -61,7 +61,7 @@ onMounted(load)
           {{ d.mode === 'double' ? '保险抽' : '单抽' }} · {{ d.cost }} 分 · {{ fmtTime(d.createdAt) }}
         </p>
         <template #actions>
-          <button class="btn btn-primary max-lg:w-full" @click="fulfill(d)">
+          <button class="btn btn-primary max-lg:w-full max-lg:btn-lg" @click="fulfill(d)">
             标记已发放
           </button>
         </template>

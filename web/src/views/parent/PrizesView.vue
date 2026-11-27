@@ -98,9 +98,9 @@ onMounted(load)
     <PageHeader title="奖品与定价" />
     <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
 
-    <div class="card border border-base-300 bg-base-100 shadow-sm">
-      <div class="card-body gap-3">
-        <h3 class="text-base font-bold">转盘定价</h3>
+    <div class="surface p-5">
+      <div class="flex flex-col gap-3">
+        <h3 class="text-base font-semibold">转盘定价</h3>
         <div class="flex flex-wrap items-end gap-3">
           <div>
             <label class="label mb-1 justify-start text-sm text-base-content/70" for="single-cost">
@@ -140,9 +140,9 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="card mt-4 border border-base-300 bg-base-100 shadow-sm">
-      <div class="card-body gap-3">
-        <h3 class="text-base font-bold">添加奖品</h3>
+    <div class="surface mt-4 p-5">
+      <div class="flex flex-col gap-3">
+        <h3 class="text-base font-semibold">添加奖品</h3>
         <!-- 手机上竖向堆叠（join-vertical），lg 起横向拼接 -->
         <div class="join w-full max-lg:join-vertical">
           <input
@@ -170,14 +170,14 @@ onMounted(load)
       <RowCard v-for="pz in prizes" :key="pz.id" :class="!pz.active ? 'opacity-60' : ''">
         <p class="flex items-center gap-2">
           <span class="text-2xl">{{ pz.emoji }}</span>
-          <span class="font-semibold">{{ pz.name }}</span>
+          <span class="font-medium">{{ pz.name }}</span>
         </p>
         <template #actions>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="rename(pz)">改名</button>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="changeEmoji(pz)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="rename(pz)">改名</button>
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="changeEmoji(pz)">
             改 emoji
           </button>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="toggle(pz)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="toggle(pz)">
             {{ pz.active ? '停用' : '启用' }}
           </button>
         </template>

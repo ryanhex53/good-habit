@@ -82,9 +82,9 @@ onMounted(load)
     <PageHeader title="积分项" />
     <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
 
-    <div class="card border border-base-300 bg-base-100 shadow-sm">
-      <div class="card-body gap-3">
-        <h3 class="text-base font-bold">添加积分项</h3>
+    <div class="surface p-5">
+      <div class="flex flex-col gap-3">
+        <h3 class="text-base font-semibold">添加积分项</h3>
         <!-- 手机上竖向堆叠（join-vertical），lg 起横向拼接 -->
         <div class="join w-full max-lg:join-vertical">
           <input
@@ -115,15 +115,15 @@ onMounted(load)
     <div class="mt-4 flex flex-col gap-3">
       <RowCard v-for="it in items" :key="it.id" :class="!it.active ? 'opacity-60' : ''">
         <p class="flex flex-wrap items-center gap-2">
-          <span class="font-semibold">{{ it.title }}</span>
+          <span class="font-medium">{{ it.title }}</span>
           <em class="badge badge-soft not-italic">+{{ it.points }} 分</em>
         </p>
         <template #actions>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="rename(it)">改名</button>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="editPoints(it)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="rename(it)">改名</button>
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="editPoints(it)">
             改分值
           </button>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="toggle(it)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="toggle(it)">
             {{ it.active ? '停用' : '启用' }}
           </button>
         </template>

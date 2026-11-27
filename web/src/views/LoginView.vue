@@ -42,7 +42,7 @@ async function submit() {
       aria-hidden="true"
     ></div>
 
-    <div class="card relative w-full max-w-sm bg-base-100 shadow-md">
+    <div class="card relative w-full max-w-sm bg-base-100 shadow-overlay">
       <div class="card-body gap-4">
         <div class="text-center">
           <div class="flex items-center justify-center gap-2">
@@ -51,7 +51,7 @@ async function submit() {
             >
               <BaseIcon name="star" class="size-6" />
             </span>
-            <h1 class="text-2xl font-extrabold">好习惯</h1>
+            <h1 class="text-2xl font-bold">好习惯</h1>
           </div>
           <p class="mt-1 text-sm text-base-content/60">积分攒起来，转盘抽惊喜</p>
         </div>

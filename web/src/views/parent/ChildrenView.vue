@@ -92,9 +92,9 @@ onMounted(load)
     <PageHeader title="孩子管理" />
     <div v-if="error" class="alert alert-error py-2 text-sm" role="alert">{{ error }}</div>
 
-    <div class="card border border-base-300 bg-base-100 shadow-sm">
-      <div class="card-body gap-3">
-        <h3 class="text-base font-bold">添加孩子</h3>
+    <div class="surface p-5">
+      <div class="flex flex-col gap-3">
+        <h3 class="text-base font-semibold">添加孩子</h3>
         <!-- 手机上每个字段独占一行、按钮整行；lg 起同一行 -->
         <div class="flex flex-col gap-2 lg:flex-row lg:flex-wrap">
           <input
@@ -129,17 +129,17 @@ onMounted(load)
 
     <div class="mt-4 flex flex-col gap-3">
       <RowCard v-for="c in children" :key="c.id" :class="!c.active ? 'opacity-60' : ''">
-        <p class="font-bold">
+        <p class="font-semibold">
           {{ c.displayName }}
           <em v-if="!c.active" class="badge badge-ghost badge-sm ml-1 not-italic">已停用</em>
         </p>
         <p class="text-xs text-base-content/60">{{ c.username }} · {{ c.balance }} 分</p>
         <template #actions>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="rename(c)">改名</button>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="resetPw(c)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="rename(c)">改名</button>
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="resetPw(c)">
             重置密码
           </button>
-          <button class="btn btn-ghost max-lg:min-h-11 lg:btn-sm" @click="toggleActive(c)">
+          <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="toggleActive(c)">
             {{ c.active ? '停用' : '恢复' }}
           </button>
         </template>
