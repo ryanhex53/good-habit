@@ -71,6 +71,8 @@
 - CRUD 积分项：标题 + 分值（正整数）+ 排序 + 启用/停用。示例数据内置在首次注册的引导里可一键导入（见 §11 引导页）。
 - 积分项读取走内存快照，不查库。
 
+> 2026-11-27 增量：积分项可指定适用孩子，见 2026-11-27-point-item-child-scope-design.md。
+
 ### 4.4 登记得分（家长）
 - 家长选孩子 + 积分项 → 一次登记 = 一条账单（`kind=earn`，delta = 分值）。可加备注。
 - 高频操作：走热路径（内存余额原子加 + 异步落盘，见 §6.4/6.5）。
@@ -216,6 +218,13 @@ CREATE TABLE reward_items (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX idx_reward_items_family ON reward_items(family_id, active, sort);
+
+CREATE TABLE reward_item_children (
+  reward_item_id INTEGER NOT NULL REFERENCES reward_items(id),
+  child_id       INTEGER NOT NULL REFERENCES users(id),
+  PRIMARY KEY (reward_item_id, child_id)
+);
+CREATE INDEX idx_reward_item_children_child ON reward_item_children(child_id);
 
 CREATE TABLE prizes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

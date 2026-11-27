@@ -59,6 +59,11 @@ func (s *server) handleEarning(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !item.AppliesTo(body.ChildID) {
+		writeErr(w, http.StatusUnprocessableEntity, "item_not_applicable", "该积分项不适用于这个孩子")
+		return
+	}
+
 	note := strings.TrimSpace(body.Note)
 	itemTitle := item.Title
 	itemID := item.ID

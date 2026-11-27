@@ -286,3 +286,106 @@ func TestConcurrentEarn(t *testing.T) {
 	// 并发后的账单余额链必须自洽（不变量 §9.1）
 	assertLedgerChain(t, deps.DBs, child.ID)
 }
+
+func TestEarnItemScope(t *testing.T) {
+	deps, w := newDepsWithWriter(t)
+	h := New(deps)
+	p := regParent(t, deps.Auth, "scoper1")
+	pc := parentCookie(p.Token)
+	a := mkChild(t, h, pc, "scoper1a", "甲")
+	b := mkChild(t, h, pc, "scoper1b", "乙")
+
+	everyone := mkItem(t, h, pc, "大家的", 3)
+	onlyA := mkScopedItem(t, h, pc, "只给甲", 5, a.ID)
+
+	earn := func(childID, itemID int64) *httptest.ResponseRecorder {
+		return doJSON(h, "POST", "/api/earnings", map[string]any{
+			"childId": childID, "rewardItemId": itemID,
+		}, pc)
+	}
+	if rr := earn(b.ID, everyone.ID); rr.Code != 200 {
+		t.Errorf("所有孩子模式给乙记 = %d %s", rr.Code, rr.Body.String())
+	}
+	if rr := earn(a.ID, onlyA.ID); rr.Code != 200 {
+		t.Errorf("指定给甲、给甲记 = %d %s", rr.Code, rr.Body.String())
+	}
+	if rr := earn(b.ID, onlyA.ID); rr.Code != 422 || errCode(t, rr) != "item_not_applicable" {
+		t.Errorf("指定给甲、给乙记 = %d %s, want 422 item_not_applicable", rr.Code, rr.Body.String())
+	}
+	if got := deps.Store.Child(b.ID).Bal(); got != 3 {
+		t.Errorf("乙余额 = %d, want 3（被拒那笔不得入账）", got)
+	}
+
+	// 改范围后紧接着登记：快照必须已刷新
+	doJSON(h, "PATCH", apiPath("reward-items", onlyA.ID), map[string]any{"childIds": []int64{b.ID}}, pc)
+	if rr := earn(a.ID, onlyA.ID); rr.Code != 422 {
+		t.Errorf("改成只乙后给甲记 = %d, want 422", rr.Code)
+	}
+	if rr := earn(b.ID, onlyA.ID); rr.Code != 200 {
+		t.Errorf("改成只乙后给乙记 = %d, want 200", rr.Code)
+	}
+
+	// 停用再启用：范围保留，仍按范围生效
+	doJSON(h, "PATCH", apiPath("reward-items", onlyA.ID), map[string]any{"active": false}, pc)
+	if rr := earn(b.ID, onlyA.ID); rr.Code != 422 || errCode(t, rr) != "item_inactive" {
+		t.Errorf("停用项登记 = %d %s, want 422 item_inactive", rr.Code, rr.Body.String())
+	}
+	doJSON(h, "PATCH", apiPath("reward-items", onlyA.ID), map[string]any{"active": true}, pc)
+	if rr := earn(a.ID, onlyA.ID); rr.Code != 422 || errCode(t, rr) != "item_not_applicable" {
+		t.Errorf("重新启用后给甲记 = %d %s, want 422 item_not_applicable（范围应保留）", rr.Code, rr.Body.String())
+	}
+
+	// 落盘终态：甲 5（1 笔），乙 3+5（2 笔）；被拒的都不落盘
+	if err := w.Stop(); err != nil {
+		t.Fatalf("writer.Stop: %v", err)
+	}
+	for _, c := range []struct {
+		id         int64
+		sum, count int64
+	}{{a.ID, 5, 1}, {b.ID, 8, 2}} {
+		var sum, cnt int64
+		deps.DBs.Read.QueryRow(
+			"SELECT COALESCE(SUM(delta),0), COUNT(*) FROM ledger WHERE child_id=?", c.id).Scan(&sum, &cnt)
+		if sum != c.sum || cnt != c.count {
+			t.Errorf("孩子 %d 落盘 SUM=%d COUNT=%d, want %d/%d", c.id, sum, cnt, c.sum, c.count)
+		}
+	}
+}
+
+func TestEarnScopeSurvivesChildReactivation(t *testing.T) {
+	deps, _ := newDepsWithWriter(t)
+	h := New(deps)
+	p := regParent(t, deps.Auth, "scoper2")
+	pc := parentCookie(p.Token)
+	a := mkChild(t, h, pc, "scoper2a", "甲")
+	b := mkChild(t, h, pc, "scoper2b", "乙")
+
+	keep := mkScopedItem(t, h, pc, "没动过", 2, a.ID, b.ID)
+	touched := mkScopedItem(t, h, pc, "停用期间保存过", 2, a.ID, b.ID)
+
+	// 停用乙：关联行必须原样保留
+	doJSON(h, "PATCH", apiPath("children", b.ID), map[string]any{"active": false}, pc)
+	var n int64
+	deps.DBs.Read.QueryRow("SELECT COUNT(*) FROM reward_item_children WHERE child_id=?", b.ID).Scan(&n)
+	if n != 2 {
+		t.Fatalf("停用孩子后关联行 = %d, want 2（不得级联清理）", n)
+	}
+
+	// 停用期间保存「停用期间保存过」：范围只剩甲
+	doJSON(h, "PATCH", apiPath("reward-items", touched.ID), map[string]any{"childIds": []int64{a.ID}}, pc)
+
+	// 恢复乙
+	doJSON(h, "PATCH", apiPath("children", b.ID), map[string]any{"active": true}, pc)
+
+	earn := func(childID, itemID int64) int {
+		return doJSON(h, "POST", "/api/earnings", map[string]any{
+			"childId": childID, "rewardItemId": itemID,
+		}, pc).Code
+	}
+	if got := earn(b.ID, keep.ID); got != 200 {
+		t.Errorf("没动过的项：乙恢复后应重新生效 = %d, want 200", got)
+	}
+	if got := earn(b.ID, touched.ID); got != 422 {
+		t.Errorf("保存过的项：乙恢复后不应生效 = %d, want 422", got)
+	}
+}

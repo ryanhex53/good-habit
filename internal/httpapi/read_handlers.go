@@ -13,12 +13,15 @@ type guideItem struct {
 	Points int64  `json:"points"`
 }
 
-// GET /api/guide（child）：得分指南——只读快照（做什么能得分）。
+// GET /api/guide（child）：得分指南——只读快照（做什么能得分），只含适用于该孩子的项。
 func (s *server) handleGuide(w http.ResponseWriter, r *http.Request) {
 	sess, _ := SessionFrom(r)
 	items := []guideItem{}
 	if fc := s.deps.Store.Family(sess.FamilyID); fc != nil {
 		for _, it := range fc.Items {
+			if !it.AppliesTo(sess.UserID) {
+				continue
+			}
 			items = append(items, guideItem{ID: it.ID, Title: it.Title, Points: it.Points})
 		}
 	}

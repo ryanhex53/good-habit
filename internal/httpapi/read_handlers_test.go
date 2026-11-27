@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"slices"
 	"testing"
 )
 
@@ -243,5 +245,44 @@ func TestOverview(t *testing.T) {
 	json.Unmarshal(rr.Body.Bytes(), &ov)
 	if ov.Children[0].Balance != 95 || ov.Children[0].Unfulfilled != 1 {
 		t.Errorf("抽奖后 overview 不符: %+v", ov.Children[0])
+	}
+}
+
+func TestGuideScopedByChild(t *testing.T) {
+	deps, _ := newDepsWithWriter(t)
+	h := New(deps)
+	p := regParent(t, deps.Auth, "guide1")
+	pc := parentCookie(p.Token)
+	a := mkChild(t, h, pc, "guide1a", "甲")
+	b := mkChild(t, h, pc, "guide1b", "乙")
+
+	mkItem(t, h, pc, "大家的", 1)
+	mkScopedItem(t, h, pc, "只给甲", 2, a.ID)
+	mkScopedItem(t, h, pc, "只给乙", 3, b.ID)
+
+	titles := func(cookie *http.Cookie) []string {
+		rr := doJSON(h, "GET", "/api/guide", nil, cookie)
+		if rr.Code != 200 {
+			t.Fatalf("guide = %d %s", rr.Code, rr.Body.String())
+		}
+		var g struct {
+			Items []struct {
+				Title string `json:"title"`
+			} `json:"items"`
+		}
+		json.Unmarshal(rr.Body.Bytes(), &g)
+		out := []string{}
+		for _, it := range g.Items {
+			out = append(out, it.Title)
+		}
+		return out
+	}
+	ka := loginAs(t, h, "guide1a", "password8")
+	kb := loginAs(t, h, "guide1b", "password8")
+	if got, want := titles(ka), []string{"大家的", "只给甲"}; !slices.Equal(got, want) {
+		t.Errorf("甲的指南 = %v, want %v", got, want)
+	}
+	if got, want := titles(kb), []string{"大家的", "只给乙"}; !slices.Equal(got, want) {
+		t.Errorf("乙的指南 = %v, want %v", got, want)
 	}
 }
