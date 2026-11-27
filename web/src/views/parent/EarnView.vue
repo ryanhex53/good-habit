@@ -63,6 +63,7 @@ async function earn(item: ItemView) {
   if (selected.value === null || toastVisible.value) return
   const child = children.value.find((c) => c.id === selected.value)
   if (!child) return
+  error.value = ''
   confirming.value = true
   try {
     const ok = await dialogs.confirm({
@@ -71,7 +72,6 @@ async function earn(item: ItemView) {
       confirmText: '登记',
     })
     if (!ok) return
-    error.value = ''
     try {
       const res = await api<EntryResp>('POST', '/api/earnings', {
         childId: selected.value,

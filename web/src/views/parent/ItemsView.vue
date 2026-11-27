@@ -112,7 +112,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="mt-4 flex flex-col gap-3">
+    <div class="mt-6 flex flex-col gap-3">
       <RowCard v-for="it in items" :key="it.id" :class="!it.active ? 'opacity-60' : ''">
         <p class="flex flex-wrap items-center gap-2">
           <span class="font-medium">{{ it.title }}</span>

@@ -103,9 +103,7 @@ onMounted(load)
         <h3 class="text-base font-semibold">转盘定价</h3>
         <div class="flex flex-wrap items-end gap-3">
           <div>
-            <label class="label mb-1 justify-start text-sm text-base-content/70" for="single-cost">
-              单抽
-            </label>
+            <label class="field-label" for="single-cost">单抽</label>
             <input
               id="single-cost"
               v-model.number="singleCost"
@@ -116,9 +114,7 @@ onMounted(load)
             />
           </div>
           <div>
-            <label class="label mb-1 justify-start text-sm text-base-content/70" for="double-cost">
-              保险双抽
-            </label>
+            <label class="field-label" for="double-cost">保险双抽</label>
             <input
               id="double-cost"
               v-model.number="doubleCost"
@@ -140,7 +136,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="surface mt-4 p-5">
+    <div class="surface mt-6 p-5">
       <div class="flex flex-col gap-3">
         <h3 class="text-base font-semibold">添加奖品</h3>
         <!-- 手机上竖向堆叠（join-vertical），lg 起横向拼接 -->
@@ -166,7 +162,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="mt-4 flex flex-col gap-3">
+    <div class="mt-6 flex flex-col gap-3">
       <RowCard v-for="pz in prizes" :key="pz.id" :class="!pz.active ? 'opacity-60' : ''">
         <p class="flex items-center gap-2">
           <span class="text-2xl">{{ pz.emoji }}</span>

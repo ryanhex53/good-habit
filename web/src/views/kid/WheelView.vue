@@ -149,12 +149,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="pt-2">
+  <div>
     <p v-if="loaded" class="relative flex items-baseline justify-center gap-1.5">
       <span class="text-base text-base-content/60">当前积分</span>
-      <TickNumber :value="balance" enter class="text-stat text-base-content" />
+      <!-- 浮标挂在包住数字的定位容器里，left-1/2 才正对数字（整行中心会偏到数字左侧） -->
+      <span class="relative inline-block">
+        <TickNumber :value="balance" enter class="text-stat text-base-content" />
+        <span v-if="floatText" class="float-chip">{{ floatText }}</span>
+      </span>
       <span class="text-sm text-base-content/55">分</span>
-      <span v-if="floatText" class="float-chip">{{ floatText }}</span>
     </p>
     <WheelCanvas ref="wheelRef" :prizes="prizes" />
     <!-- 选择弹窗打开时，提示改渲染在弹窗内（弹窗处于顶层，行内提示会被遮住） -->

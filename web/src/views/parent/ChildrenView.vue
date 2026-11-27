@@ -127,7 +127,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="mt-4 flex flex-col gap-3">
+    <div class="mt-6 flex flex-col gap-3">
       <RowCard v-for="c in children" :key="c.id" :class="!c.active ? 'opacity-60' : ''">
         <p class="font-semibold">
           {{ c.displayName }}

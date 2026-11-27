@@ -29,6 +29,8 @@ function stopRaf() {
 }
 
 // 落定时播一次 bump：先移除类、强制回流、再加回，连续变化也能重新触发
+// 注意：这里靠 classList 命令式加类，依赖父组件传入的 class 是静态串——
+// 若父组件用动态 :class 绑定，重渲染会抹掉 bump 类
 function playBump() {
   const el = root.value
   if (!el) return

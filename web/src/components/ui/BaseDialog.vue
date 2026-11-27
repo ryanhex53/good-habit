@@ -12,17 +12,29 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 const el = ref<HTMLDialogElement | null>(null)
 
+// 弹窗打开的时刻：物理双击时第二下（100–250ms 后）会落在刚出现的遮罩上，
+// 开场 250ms 内忽略遮罩点击，避免确认框「开即关」、什么都没登记。
+let openedAt = 0
+
 function onCancel(e: Event): void {
   // 关闭一律经由父组件卸载完成；不可关闭的弹窗直接吞掉 Esc
   e.preventDefault()
   if (props.dismissible) emit('close')
 }
 
-function onBackdrop(): void {
+function onBackdrop(e: Event): void {
+  // 物理双击的第二下（100–250ms 后）会落在刚出现的遮罩上：开场 250ms 内整体忽略。
+  // 注意 preventDefault 不能省——遮罩是 method="dialog" 的表单，只 return 的话
+  // 浏览器仍会原生提交并关掉弹窗，且 confirm() 永远悬空。
+  if (performance.now() - openedAt < 250) {
+    e.preventDefault()
+    return
+  }
   if (props.dismissible) emit('close')
 }
 
 onMounted(() => {
+  openedAt = performance.now()
   el.value?.showModal()
 })
 onBeforeUnmount(() => {
