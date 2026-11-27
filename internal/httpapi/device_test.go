@@ -19,6 +19,12 @@ func TestDeviceLabel(t *testing.T) {
 		{"三星带旧版本号", "Mozilla/5.0 (Linux; Android 6.0.1; SM-G920F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Mobile Safari/537.36", "SM-G920F Android 6.0.1"},
 		{"Chrome 缩减形态 Android 10; K → 版本被冻结，不显示误导性版本", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36", "Android"},
 		{"Android 无型号", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36", "Android 14"},
+		// 旧式 (Linux; U; Android x; <locale>; <model>)：小米自带浏览器、QQ/UC/百度浏览器与 Android ≤4.3 仍是这个格式，
+		// 型号在 locale 之后的第三段；漏掉会落到 Linux 规则给出错误的 "Linux"
+		{"旧式 U; 段：型号在 locale 之后（MIUI 浏览器）", "Mozilla/5.0 (Linux; U; Android 13; fa-ir; Redmi Note 11 Build/TKQ1.221114.001) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.127 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.25.2.2 gn", "Redmi Note 11 Android 13"},
+		{"旧式 U; 段 + zh-cn（MIUI 10）", "Mozilla/5.0 (Linux; U; Android 7.1.2; zh-cn; Redmi 5A Build/N2G47H) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/61.0.3163.128 Mobile Safari/537.36 XiaoMi/MiuiBrowser/10.0.1", "Redmi 5A Android 7.1.2"},
+		{"旧式 U; 段：Android 4.3 平板", "Mozilla/5.0 (Linux; U; Android 4.3; zh-cn; SM-T310 Build/JLS36C) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/61.0.3163.128 Mobile Safari/537.36", "SM-T310 Android 4.3"},
+		{"旧式 U; 段：无型号只有 wv → 不把 wv 当型号", "Mozilla/5.0 (Linux; U; Android 10; zh-cn; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0.0.0 Mobile Safari/537.36", "Android 10"},
 		{"Windows Chrome", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Windows"},
 		{"macOS Safari", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15", "macOS"},
 		{"ChromeOS（含 X11，须先于 X11 命中）", "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "ChromeOS"},

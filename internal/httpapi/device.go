@@ -28,8 +28,11 @@ func clipUserAgent(raw string) string {
 
 var (
 	iosRe = regexp.MustCompile(`\((iPhone|iPad|iPod); CPU (?:iPhone OS|OS) ([0-9_]+) like Mac OS X`)
-	// 组 2（型号）可缺省；[;)] 兼容微信 WebView 的 "; wv)"
-	androidRe = regexp.MustCompile(`\(Linux; Android ([0-9]+(?:\.[0-9]+)*)(?:; ([^;)]+))?`)
+	// 旧式 (Linux; U; Android x; <locale>; <model>) 的 "U;" 与 locale 段都要容忍：小米自带浏览器、
+	// QQ/UC/百度浏览器与 Android ≤4.3 仍是这个格式，型号在第三段；漏掉会落到 Linux 规则给出错误的 "Linux"。
+	// 组 2 是型号，或是 locale（此时型号在组 3）；[;)] 兼容微信 WebView 的 "; wv)"
+	androidRe = regexp.MustCompile(`\(Linux;(?: U;)? Android ([0-9]+(?:\.[0-9]+)*)(?:; ([^;)]+))?(?:; ([^;)]+))?`)
+	localeRe  = regexp.MustCompile(`^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
 	buildRe   = regexp.MustCompile(`\s*Build/\S+`)
 )
 
@@ -53,14 +56,18 @@ func deviceLabel(ua string) string {
 		return m[1] + " " + osName + " " + strings.ReplaceAll(m[2], "_", ".")
 	}
 	if m := androidRe.FindStringSubmatch(ua); m != nil {
-		model := strings.TrimSpace(buildRe.ReplaceAllString(m[2], ""))
+		raw := m[2]
+		if localeRe.MatchString(raw) {
+			raw = m[3] // 跳过 zh-cn / en-us 这类 locale 段
+		}
+		model := strings.TrimSpace(buildRe.ReplaceAllString(raw, ""))
 		if model == "K" { // Chrome UA 缩减占位：版本也被冻结成 10，不显示误导性的版本
 			return "Android"
 		}
-		if model != "" && len(model) <= 40 {
-			return model + " Android " + m[1]
+		if model == "" || model == "wv" || len(model) > 40 { // 无型号 / WebView 标记 / 垃圾 token
+			return "Android " + m[1]
 		}
-		return "Android " + m[1]
+		return model + " Android " + m[1]
 	}
 	switch {
 	case strings.Contains(ua, "Windows NT"):
