@@ -25,6 +25,23 @@ const showAddChips = computed(() => activeChildren.value.length >= 2)
 const showScopeControls = computed(
   () => showAddChips.value || items.value.some((it) => it.childIds.length > 0),
 )
+// 添加卡片选中了孩子时，列表只显示适用于这些孩子的项（childIds 为空 = 所有孩子，照常显示）；
+// 「所有孩子」或指定模式未选任何孩子 → 不过滤。停用项保留置灰，只按范围过滤。
+const visibleItems = computed(() => {
+  const sel = newScope.value
+  if (sel === 'all' || sel.length === 0) return items.value
+  return items.value.filter((it) => it.childIds.length === 0 || it.childIds.some((id) => sel.includes(id)))
+})
+// 过滤后为空时区分「家里还没有积分项」和「这些孩子暂无适用的项」
+const emptyText = computed(() => {
+  if (items.value.length === 0) return '还没有积分项'
+  const sel = newScope.value
+  if (sel === 'all' || sel.length === 0) return '还没有积分项'
+  const names = sel
+    .map((id) => children.value.find((c) => c.id === id)?.displayName ?? '')
+    .filter(Boolean)
+  return names.length ? `「${names.join('、')}」暂无适用的积分项` : '还没有积分项'
+})
 
 const dialogs = useDialogs()
 
@@ -159,7 +176,7 @@ onMounted(load)
     </div>
 
     <div class="mt-6 flex flex-col gap-3">
-      <RowCard v-for="it in items" :key="it.id" :class="!it.active ? 'opacity-60' : ''">
+      <RowCard v-for="it in visibleItems" :key="it.id" :class="!it.active ? 'opacity-60' : ''">
         <p class="flex flex-wrap items-center gap-2">
           <span class="font-medium">{{ it.title }}</span>
           <em class="badge badge-soft not-italic">+{{ it.points }} 分</em>
@@ -185,7 +202,7 @@ onMounted(load)
         </template>
       </RowCard>
     </div>
-    <EmptyState v-if="items.length === 0" text="还没有积分项" />
+    <EmptyState v-if="visibleItems.length === 0" :text="emptyText" />
     <ItemScopeDialog
       v-if="scopeTarget"
       :item="scopeTarget"
