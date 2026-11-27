@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api, errMsg } from '../../api'
 import { useDialogs } from '../../composables/useDialogs'
 import ChildScopeChips from '../../components/ChildScopeChips.vue'
+import ItemScopeDialog from '../../components/ItemScopeDialog.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import RowCard from '../../components/ui/RowCard.vue'
@@ -14,6 +15,8 @@ const error = ref('')
 const newTitle = ref('')
 const newPoints = ref<number | null>(null)
 const newScope = ref<ItemScope>('all')
+// 「适用孩子」弹窗的目标积分项；非空时挂载弹窗，关闭即置回 null
+const scopeTarget = ref<ItemView | null>(null)
 
 const activeChildren = computed(() => children.value.filter((c) => c.active))
 // chip 排仅当启用中的孩子 ≥ 2 时显示（单孩家庭没有选择的意义）
@@ -92,6 +95,12 @@ async function rename(it: ItemView) {
   }
 }
 
+// 「适用孩子」弹窗保存成功：关弹窗并刷新列表（范围标签可能变化）
+function onScopeSaved(): void {
+  scopeTarget.value = null
+  load()
+}
+
 // 行内范围标签：无关联 = 所有孩子；指定模式用完整孩子列表（含停用）按 id 找名字，
 // 已停用的加后缀「（已停用）」，找不到的 id 跳过。
 function scopeLabel(it: ItemView): string {
@@ -158,6 +167,13 @@ onMounted(load)
           <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="editPoints(it)">
             改分值
           </button>
+          <button
+            v-if="showScopeControls"
+            class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm"
+            @click="scopeTarget = it"
+          >
+            适用孩子
+          </button>
           <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="toggle(it)">
             {{ it.active ? '停用' : '启用' }}
           </button>
@@ -165,5 +181,12 @@ onMounted(load)
       </RowCard>
     </div>
     <EmptyState v-if="items.length === 0" text="还没有积分项" />
+    <ItemScopeDialog
+      v-if="scopeTarget"
+      :item="scopeTarget"
+      :children="activeChildren"
+      @close="scopeTarget = null"
+      @saved="onScopeSaved"
+    />
   </div>
 </template>
