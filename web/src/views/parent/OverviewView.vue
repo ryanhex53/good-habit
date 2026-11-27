@@ -56,7 +56,7 @@ onMounted(async () => {
       <section class="mt-8">
         <h3 class="mb-3 text-base font-semibold">孩子</h3>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <article v-for="c in info.children" :key="c.id" class="surface p-5">
+          <article v-for="c in info.children" :key="c.id" class="surface min-w-0 p-5">
             <div class="flex items-center justify-between gap-3">
               <h4 class="truncate text-base font-semibold">{{ c.displayName }}</h4>
               <span v-if="c.unfulfilled > 0 || c.hasPending" class="flex flex-wrap gap-1.5">
