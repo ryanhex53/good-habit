@@ -15,7 +15,19 @@ const dialogs = useDialogs()
 const children = ref<ChildView[]>([])
 const items = ref<ItemView[]>([])
 const activeChildren = computed(() => children.value.filter((c) => c.active))
-const activeItems = computed(() => items.value.filter((i) => i.active))
+// 登记页只显示选中孩子适用的积分项：childIds 为空 = 所有孩子；未选中孩子时只按启用状态过滤
+const activeItems = computed(() =>
+  items.value.filter(
+    (i) => i.active && (selected.value === null || i.childIds.length === 0 || i.childIds.includes(selected.value)),
+  ),
+)
+
+// 空状态文案：家庭没有启用中的积分项时给添加指引；有但选中孩子一个都不适用时点名孩子
+const emptyText = computed<string>(() => {
+  if (!items.value.some((i) => i.active)) return '还没有积分项，先去「积分项」页添加'
+  const c = children.value.find((x) => x.id === selected.value)
+  return c ? `「${c.displayName}」暂无可登记的积分项` : '还没有积分项，先去「积分项」页添加'
+})
 
 const selected = ref<number | null>(null)
 const note = ref('')
@@ -187,7 +199,7 @@ onMounted(load)
           </span>
         </div>
         <p v-if="activeItems.length === 0" class="py-8 text-center text-sm text-base-content/60">
-          还没有积分项，先去「积分项」页添加
+          {{ emptyText }}
         </p>
       </section>
 
