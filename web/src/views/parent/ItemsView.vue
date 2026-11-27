@@ -1,21 +1,37 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api, errMsg } from '../../api'
 import { useDialogs } from '../../composables/useDialogs'
+import ChildScopeChips from '../../components/ChildScopeChips.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import RowCard from '../../components/ui/RowCard.vue'
-import type { ItemView } from '../../types'
+import type { ChildView, ItemScope, ItemView } from '../../types'
 
+const children = ref<ChildView[]>([])
 const items = ref<ItemView[]>([])
 const error = ref('')
 const newTitle = ref('')
 const newPoints = ref<number | null>(null)
+const newScope = ref<ItemScope>('all')
+
+const activeChildren = computed(() => children.value.filter((c) => c.active))
+// chip 排仅当启用中的孩子 ≥ 2 时显示（单孩家庭没有选择的意义）
+const showAddChips = computed(() => activeChildren.value.length >= 2)
+// 范围标签：chip 排可见，或列表里已有指定模式的项（停用孩子也可能被指定到）
+const showScopeControls = computed(
+  () => showAddChips.value || items.value.some((it) => it.childIds.length > 0),
+)
 
 const dialogs = useDialogs()
 
 async function load() {
-  items.value = (await api<{ items: ItemView[] }>('GET', '/api/reward-items')).items
+  const [kids, list] = await Promise.all([
+    api<{ children: ChildView[] }>('GET', '/api/children'),
+    api<{ items: ItemView[] }>('GET', '/api/reward-items'),
+  ])
+  children.value = kids.children
+  items.value = list.items
 }
 
 async function create() {
@@ -24,9 +40,11 @@ async function create() {
     await api('POST', '/api/reward-items', {
       title: newTitle.value,
       points: newPoints.value,
+      childIds: newScope.value === 'all' ? [] : newScope.value,
     })
     newTitle.value = ''
     newPoints.value = null
+    newScope.value = 'all'
     load()
   } catch (e) {
     error.value = errMsg(e)
@@ -74,6 +92,19 @@ async function rename(it: ItemView) {
   }
 }
 
+// 行内范围标签：无关联 = 所有孩子；指定模式用完整孩子列表（含停用）按 id 找名字，
+// 已停用的加后缀「（已停用）」，找不到的 id 跳过。
+function scopeLabel(it: ItemView): string {
+  if (it.childIds.length === 0) return '所有孩子'
+  const names: string[] = []
+  for (const id of it.childIds) {
+    const c = children.value.find((x) => x.id === id)
+    if (!c) continue
+    names.push(c.active ? c.displayName : `${c.displayName}（已停用）`)
+  }
+  return names.join('、')
+}
+
 onMounted(load)
 </script>
 
@@ -100,12 +131,13 @@ onMounted(load)
           />
           <button
             class="btn btn-primary join-item max-lg:btn-lg"
-            :disabled="!newTitle || !newPoints"
+            :disabled="!newTitle || !newPoints || (newScope !== 'all' && newScope.length === 0)"
             @click="create"
           >
             添加
           </button>
         </div>
+        <ChildScopeChips v-if="showAddChips" v-model="newScope" :children="activeChildren" />
         <p class="text-xs text-base-content/50">
           停用的积分项不再出现在登记页与孩子的得分指南里
         </p>
@@ -117,6 +149,9 @@ onMounted(load)
         <p class="flex flex-wrap items-center gap-2">
           <span class="font-medium">{{ it.title }}</span>
           <em class="badge badge-soft not-italic">+{{ it.points }} 分</em>
+        </p>
+        <p v-if="showScopeControls" class="scope-label truncate text-xs text-base-content/50">
+          {{ scopeLabel(it) }}
         </p>
         <template #actions>
           <button class="btn btn-ghost max-lg:min-h-11 lg:h-8 lg:min-h-8 lg:px-2.5 lg:text-sm" @click="rename(it)">改名</button>

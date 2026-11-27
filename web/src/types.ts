@@ -79,12 +79,17 @@ export interface ChildView {
   active: boolean
 }
 
+// 适用范围：'all' = 所有孩子；number[] = 恰好这些孩子，[] = 指定模式但零选中
+export type ItemScope = 'all' | number[]
+
 export interface ItemView {
   id: number
   title: string
   points: number
   active: boolean
   sort: number
+  // 适用孩子；空数组 = 所有孩子
+  childIds: number[]
 }
 
 export interface PrizeAdminView {
